@@ -60,6 +60,22 @@ def load_dotenv(path: str | None = None) -> None:
 load_dotenv()
 
 
+_PROMPTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts")
+
+
+def load_prompt(name: str) -> str:
+    """读取 llm/prompts/ 下的 prompt 模板（如 "optimize.txt"）。
+
+    Prompt 是 B 组的交付物，和代码分开放成纯文本，改 prompt 不用动 Python。
+    """
+    path = os.path.join(_PROMPTS_DIR, name)
+    try:
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError as e:
+        raise LLMError(f"找不到 prompt 模板：{name}（在 {_PROMPTS_DIR}）") from e
+
+
 def _extract_json(text: str) -> dict:
     """把模型返回的文本解析成 dict。
 

@@ -10,6 +10,7 @@ from .client import (
     StubLLMClient,
     default_client,
     load_dotenv,
+    load_prompt,
 )
 
 __all__ = [
@@ -19,4 +20,5 @@ __all__ = [
     "LLMError",
     "default_client",
     "load_dotenv",
+    "load_prompt",
 ]
