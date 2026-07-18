@@ -1,0 +1,63 @@
+// ============================================================
+// 新语言文法（阶段一·扩展版）
+// 支持：整数、变量赋值、四则运算、比较运算、if/else、while、数组
+//
+// 说明：expr/arith/term/factor 用 ? 前缀 —— 含义是
+// "当这条规则只匹配到一个子节点时，省掉自己、直接用子节点"，
+// 从而消除纯透传产生的多余树节点；而带 -> 别名的分支
+// （add/mul/lt 等）仍会正常生成节点，交给 transformer 翻译。
+// 这是 Lark 写表达式优先级的标准惯用法。
+// （注意：? 前缀可以和 -> 别名共存；_ 前缀不行。）
+//
+// 优先级从低到高：比较 < 加减 < 乘除 < 原子
+// 比较放最低，是为了让 `while (i < n)` 这种条件不用加括号。
+// ============================================================
+
+start: statement+
+
+// ?statement：if_stmt / while_stmt 这两个分支没有别名、只有单个子节点，
+// 靠 ? 直接透传上来，不会多包一层 statement 节点。
+?statement: "let" NAME "=" expr ";"                -> assign
+          | NAME "=" expr ";"                      -> assign
+          | NAME "[" expr "]" "=" expr ";"         -> assign_idx
+          | "print" expr ";"                       -> print_stmt
+          | if_stmt
+          | while_stmt
+
+if_stmt: "if" "(" expr ")" block ("else" block)?
+while_stmt: "while" "(" expr ")" block
+
+block: "{" statement* "}"
+
+// ---- 表达式：三层优先级 ----
+?expr: expr "<"  arith  -> lt
+     | expr ">"  arith  -> gt
+     | expr "<=" arith  -> le
+     | expr ">=" arith  -> ge
+     | expr "==" arith  -> eq
+     | expr "!=" arith  -> ne
+     | arith
+
+?arith: arith "+" term  -> add
+      | arith "-" term  -> sub
+      | term
+
+?term: term "*" factor  -> mul
+     | term "/" factor  -> div
+     | factor
+
+?factor: NUMBER                   -> number
+       | "array" "(" expr ")"     -> array_new   // 新建长度为 expr 的零数组
+       | NAME "[" expr "]"        -> index       // 按下标读 a[i]
+       | NAME                     -> var
+       | "(" expr ")"
+
+NUMBER: /[0-9]+/
+NAME: /[a-zA-Z_][a-zA-Z0-9_]*/
+
+// 行注释：样例程序里用 `// expect: ...` 标注预期结果，供 main.py 核对
+COMMENT: /\/\/[^\n]*/
+
+%import common.WS
+%ignore WS
+%ignore COMMENT
