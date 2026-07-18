@@ -7,6 +7,9 @@ __pycache__/
 # Virtualenv（本地环境，不入库；靠 requirements 重建）
 .venv/
 
+# 机密：API key 等，只存在本地，绝不入库
+.env
+
 # 实验产物：runs/ 下的结果按时间戳生成，属于运行输出而非源码
 runs/*
 !runs/.gitkeep
