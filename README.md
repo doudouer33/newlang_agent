@@ -56,7 +56,7 @@ newlang-agent/
 │   └── registry.py            # pass 注册表，Agent 按名字组合
 │
 ├── llm/                       # B组：LLM 封装
-│   ├── client.py              # 统一调用入口，强制 JSON 输出
+│   ├── client.py              # 统一调用入口，强制 JSON 输出（DeepSeek，走 OpenAI 兼容 SDK）
 │   └── prompts/               # 3 套 Prompt 模板
 │       ├── design.txt         # 语言 / AST / IR 设计
 │       ├── optimize.txt       # 优化候选生成
@@ -186,7 +186,7 @@ class Candidate:
     error: str = None
 ```
 
-所有 Agent 的输入输出都围绕这个对象转，日志就是一堆 Candidate 的 JSON，调试和复现都简单。
+所有 Agent 的输入输出都围绕这个对象转，日志就是一堆 Candidate 的 JSON，调试和复现都简单。**实现见顶层 `contracts.py`**——它不属于任何子包，是 agents/tools/benchmark 之间的共享契约，放顶层谁都能 import 且不产生循环依赖。
 
 ### 2. Agent 基类：统一"输入 → 处理 → 产物"三段式
 
@@ -310,8 +310,8 @@ def run_matrix(programs, repeat=5):
 
 | 阶段 | 涉及模块 | 成功标准 |
 |------|----------|----------|
-| **阶段一** 最小语言 + 最小编译链 | `lang/`（grammar.lark + transformer + ir + vm）+ `optimizer/`（const_fold + dce + registry）+ `tools/`（build/run/bench/save + Tool Router）✅ | 至少一组样例程序能从源码走到 AST/IR 并跑出结果；工具链端到端可复现（见 `tests/test_tools.py`） |
-| **阶段二** 接入 LLM 与最小 Agent 闭环 | `agents/`（前三个）+ `llm/` + `tools/` | 跑通"生成候选 → 运行测试 → 输出结果"最小闭环 |
+| **阶段一** 最小语言 + 最小编译链 | `lang/`（grammar.lark + transformer + ir + vm）+ `optimizer/`（const_fold + dce + **licm** + registry）+ `tools/`（build/run/bench/save + Tool Router）✅ | 至少一组样例程序能从源码走到 AST/IR 并跑出结果；工具链端到端可复现（见 `tests/test_tools.py`） |
+| **阶段二** 接入 LLM 与最小 Agent 闭环 | `contracts.py` + `llm/`（DeepSeek）+ `agents/`（base/planner/optimizer_agent/executor/evaluator/orchestrator 全五个）✅ | 跑通"生成候选 → 运行测试 → 输出结果"最小闭环；**已达成并超出**：做到多轮迭代 + 反馈回传 + 自动收敛 + 落盘（licm_demo 2 轮收敛，最优 `[licm]` 708 vs 基线 807） |
 | **阶段三** 形成优化闭环，进入对比实验 | `optimizer/` + `benchmark/` | 至少证明 1~2 个程序在正确性不变前提下获得明确收益 |
 | **阶段四** 补齐测试与报告 | `benchmark/report.py` + `runs/` | 统一报告模板 + 可复现实验脚本 |
 
