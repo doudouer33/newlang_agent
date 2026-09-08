@@ -13,3 +13,4 @@ __pycache__/
 # 实验产物：runs/ 下的结果按时间戳生成，属于运行输出而非源码
 runs/*
 !runs/.gitkeep
+!runs/*_benchmark.json

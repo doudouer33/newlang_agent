@@ -22,7 +22,7 @@ SAMPLES_DIR = os.path.join(HERE, "lang", "samples")
 
 # 样例按"从简到繁"排；每个样例源码里用 `// expect: ...` 标注预期输出，
 # 由下面的 parse_expected 读出来自动核对，不用人肉对答案。
-SAMPLE_ORDER = ["basic", "branch", "loop_sum", "array_dot", "licm_demo"]
+SAMPLE_ORDER = ["basic", "branch", "loop_sum", "array_dot", "licm_demo", "dead_code"]
 
 
 def load_parser():

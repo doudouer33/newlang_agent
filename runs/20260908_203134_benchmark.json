@@ -1,0 +1,1675 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-08T20:31:34+08:00",
+  "experiment": {
+    "name": "baseline_vs_optimized",
+    "selection_metric": "instr_count",
+    "repeat": 5,
+    "registered_passes": [
+      "const_fold",
+      "dce",
+      "licm"
+    ],
+    "candidate_count_per_program": 16
+  },
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.35"
+  },
+  "summary": {
+    "program_count": 6,
+    "correct_baselines": 6,
+    "correct_optimized": 6,
+    "programs_improved": 2
+  },
+  "programs": [
+    {
+      "program": "basic",
+      "source_path": "lang/samples/basic.nl",
+      "expected": [
+        7,
+        9,
+        16
+      ],
+      "baseline": {
+        "passes": [],
+        "compiled": true,
+        "correct": true,
+        "output": [
+          7,
+          9,
+          16
+        ],
+        "instr_count": 11,
+        "time_ms": 0.015437999536516145,
+        "error": ""
+      },
+      "optimized": {
+        "passes": [
+          "const_fold"
+        ],
+        "compiled": true,
+        "correct": true,
+        "output": [
+          7,
+          9,
+          16
+        ],
+        "instr_count": 11,
+        "time_ms": 0.00862700107973069,
+        "error": ""
+      },
+      "comparison": {
+        "saved_instructions": 0,
+        "reduction_percent": 0.0,
+        "improved": false
+      },
+      "candidates": [
+        {
+          "passes": [],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            7,
+            9,
+            16
+          ],
+          "instr_count": 11,
+          "time_ms": 0.015437999536516145,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            7,
+            9,
+            16
+          ],
+          "instr_count": 11,
+          "time_ms": 0.00862700107973069,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            7,
+            9,
+            16
+          ],
+          "instr_count": 11,
+          "time_ms": 0.014085999282542616,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            7,
+            9,
+            16
+          ],
+          "instr_count": 11,
+          "time_ms": 0.008641000022180378,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            7,
+            9,
+            16
+          ],
+          "instr_count": 11,
+          "time_ms": 0.008129001798806712,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            7,
+            9,
+            16
+          ],
+          "instr_count": 11,
+          "time_ms": 0.013370998203754425,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            7,
+            9,
+            16
+          ],
+          "instr_count": 11,
+          "time_ms": 0.008250000973930582,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            7,
+            9,
+            16
+          ],
+          "instr_count": 11,
+          "time_ms": 0.00892200114321895,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            7,
+            9,
+            16
+          ],
+          "instr_count": 11,
+          "time_ms": 0.013728997146245092,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            7,
+            9,
+            16
+          ],
+          "instr_count": 11,
+          "time_ms": 0.008422000973951072,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "dce",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            7,
+            9,
+            16
+          ],
+          "instr_count": 11,
+          "time_ms": 0.008048002200666815,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "licm",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            7,
+            9,
+            16
+          ],
+          "instr_count": 11,
+          "time_ms": 0.007955997716635466,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "const_fold",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            7,
+            9,
+            16
+          ],
+          "instr_count": 11,
+          "time_ms": 0.007881997589720413,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "licm",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            7,
+            9,
+            16
+          ],
+          "instr_count": 11,
+          "time_ms": 0.007924001693027094,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "const_fold",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            7,
+            9,
+            16
+          ],
+          "instr_count": 11,
+          "time_ms": 0.008270999387605116,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "dce",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            7,
+            9,
+            16
+          ],
+          "instr_count": 11,
+          "time_ms": 0.008816001354716718,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "program": "branch",
+      "source_path": "lang/samples/branch.nl",
+      "expected": [
+        17,
+        1
+      ],
+      "baseline": {
+        "passes": [],
+        "compiled": true,
+        "correct": true,
+        "output": [
+          17,
+          1
+        ],
+        "instr_count": 16,
+        "time_ms": 0.011684998753480613,
+        "error": ""
+      },
+      "optimized": {
+        "passes": [
+          "const_fold"
+        ],
+        "compiled": true,
+        "correct": true,
+        "output": [
+          17,
+          1
+        ],
+        "instr_count": 16,
+        "time_ms": 0.012149001122452319,
+        "error": ""
+      },
+      "comparison": {
+        "saved_instructions": 0,
+        "reduction_percent": 0.0,
+        "improved": false
+      },
+      "candidates": [
+        {
+          "passes": [],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            17,
+            1
+          ],
+          "instr_count": 16,
+          "time_ms": 0.011684998753480613,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            17,
+            1
+          ],
+          "instr_count": 16,
+          "time_ms": 0.012149001122452319,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            17,
+            1
+          ],
+          "instr_count": 16,
+          "time_ms": 0.011481999536044896,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            17,
+            1
+          ],
+          "instr_count": 16,
+          "time_ms": 0.01091499871108681,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            17,
+            1
+          ],
+          "instr_count": 16,
+          "time_ms": 0.010785999620566145,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            17,
+            1
+          ],
+          "instr_count": 16,
+          "time_ms": 0.012123000487918034,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            17,
+            1
+          ],
+          "instr_count": 16,
+          "time_ms": 0.010555999324424192,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            17,
+            1
+          ],
+          "instr_count": 16,
+          "time_ms": 0.01803299892344512,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            17,
+            1
+          ],
+          "instr_count": 16,
+          "time_ms": 0.021539002773351967,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            17,
+            1
+          ],
+          "instr_count": 16,
+          "time_ms": 0.018005001038545743,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "dce",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            17,
+            1
+          ],
+          "instr_count": 16,
+          "time_ms": 0.01827500091167167,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "licm",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            17,
+            1
+          ],
+          "instr_count": 16,
+          "time_ms": 0.011852000170620158,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "const_fold",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            17,
+            1
+          ],
+          "instr_count": 16,
+          "time_ms": 0.01910900027723983,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "licm",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            17,
+            1
+          ],
+          "instr_count": 16,
+          "time_ms": 0.02015600330196321,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "const_fold",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            17,
+            1
+          ],
+          "instr_count": 16,
+          "time_ms": 0.019015998987015337,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "dce",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            17,
+            1
+          ],
+          "instr_count": 16,
+          "time_ms": 0.01883000004454516,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "program": "loop_sum",
+      "source_path": "lang/samples/loop_sum.nl",
+      "expected": [
+        55
+      ],
+      "baseline": {
+        "passes": [],
+        "compiled": true,
+        "correct": true,
+        "output": [
+          55
+        ],
+        "instr_count": 76,
+        "time_ms": 0.06475699774455279,
+        "error": ""
+      },
+      "optimized": {
+        "passes": [
+          "const_fold"
+        ],
+        "compiled": true,
+        "correct": true,
+        "output": [
+          55
+        ],
+        "instr_count": 76,
+        "time_ms": 0.056021002819761634,
+        "error": ""
+      },
+      "comparison": {
+        "saved_instructions": 0,
+        "reduction_percent": 0.0,
+        "improved": false
+      },
+      "candidates": [
+        {
+          "passes": [],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            55
+          ],
+          "instr_count": 76,
+          "time_ms": 0.06475699774455279,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            55
+          ],
+          "instr_count": 76,
+          "time_ms": 0.056021002819761634,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            55
+          ],
+          "instr_count": 76,
+          "time_ms": 0.07904599988250993,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            55
+          ],
+          "instr_count": 76,
+          "time_ms": 0.07020100019872189,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            55
+          ],
+          "instr_count": 76,
+          "time_ms": 0.06206699981703423,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            55
+          ],
+          "instr_count": 76,
+          "time_ms": 0.06846800170023926,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            55
+          ],
+          "instr_count": 76,
+          "time_ms": 0.04472199725569226,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            55
+          ],
+          "instr_count": 76,
+          "time_ms": 0.07657899914192967,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            55
+          ],
+          "instr_count": 76,
+          "time_ms": 0.06349599789245985,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            55
+          ],
+          "instr_count": 76,
+          "time_ms": 0.04518400237429887,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "dce",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            55
+          ],
+          "instr_count": 76,
+          "time_ms": 0.07981000089785084,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "licm",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            55
+          ],
+          "instr_count": 76,
+          "time_ms": 0.04467899998417124,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "const_fold",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            55
+          ],
+          "instr_count": 76,
+          "time_ms": 0.04151900066062808,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "licm",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            55
+          ],
+          "instr_count": 76,
+          "time_ms": 0.04210599945508875,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "const_fold",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            55
+          ],
+          "instr_count": 76,
+          "time_ms": 0.040652997995493934,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "dce",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            55
+          ],
+          "instr_count": 76,
+          "time_ms": 0.039549002394778654,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "program": "array_dot",
+      "source_path": "lang/samples/array_dot.nl",
+      "expected": [
+        15,
+        110
+      ],
+      "baseline": {
+        "passes": [],
+        "compiled": true,
+        "correct": true,
+        "output": [
+          15,
+          110
+        ],
+        "instr_count": 158,
+        "time_ms": 0.08952399730333127,
+        "error": ""
+      },
+      "optimized": {
+        "passes": [
+          "const_fold"
+        ],
+        "compiled": true,
+        "correct": true,
+        "output": [
+          15,
+          110
+        ],
+        "instr_count": 158,
+        "time_ms": 0.0862400011101272,
+        "error": ""
+      },
+      "comparison": {
+        "saved_instructions": 0,
+        "reduction_percent": 0.0,
+        "improved": false
+      },
+      "candidates": [
+        {
+          "passes": [],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            15,
+            110
+          ],
+          "instr_count": 158,
+          "time_ms": 0.08952399730333127,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            15,
+            110
+          ],
+          "instr_count": 158,
+          "time_ms": 0.0862400011101272,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            15,
+            110
+          ],
+          "instr_count": 158,
+          "time_ms": 0.09035599941853434,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            15,
+            110
+          ],
+          "instr_count": 158,
+          "time_ms": 0.09372999920742586,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            15,
+            110
+          ],
+          "instr_count": 158,
+          "time_ms": 0.09311100075137801,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            15,
+            110
+          ],
+          "instr_count": 158,
+          "time_ms": 0.1534770017315168,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            15,
+            110
+          ],
+          "instr_count": 158,
+          "time_ms": 0.10226000085822307,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            15,
+            110
+          ],
+          "instr_count": 158,
+          "time_ms": 0.08801199874142185,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            15,
+            110
+          ],
+          "instr_count": 158,
+          "time_ms": 0.09000000136438757,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            15,
+            110
+          ],
+          "instr_count": 158,
+          "time_ms": 0.09363700155518018,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "dce",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            15,
+            110
+          ],
+          "instr_count": 158,
+          "time_ms": 0.12965099813300185,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "licm",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            15,
+            110
+          ],
+          "instr_count": 158,
+          "time_ms": 0.1496520017099101,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "const_fold",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            15,
+            110
+          ],
+          "instr_count": 158,
+          "time_ms": 0.08866500138537958,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "licm",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            15,
+            110
+          ],
+          "instr_count": 158,
+          "time_ms": 0.1400299988745246,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "const_fold",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            15,
+            110
+          ],
+          "instr_count": 158,
+          "time_ms": 0.08836900087771937,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "dce",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            15,
+            110
+          ],
+          "instr_count": 158,
+          "time_ms": 0.08916700244299136,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "program": "licm_demo",
+      "source_path": "lang/samples/licm_demo.nl",
+      "expected": [
+        30000
+      ],
+      "baseline": {
+        "passes": [],
+        "compiled": true,
+        "correct": true,
+        "output": [
+          30000
+        ],
+        "instr_count": 807,
+        "time_ms": 0.41026599865290336,
+        "error": ""
+      },
+      "optimized": {
+        "passes": [
+          "licm"
+        ],
+        "compiled": true,
+        "correct": true,
+        "output": [
+          30000
+        ],
+        "instr_count": 708,
+        "time_ms": 0.33950899887713604,
+        "error": ""
+      },
+      "comparison": {
+        "saved_instructions": 99,
+        "reduction_percent": 12.27,
+        "improved": true
+      },
+      "candidates": [
+        {
+          "passes": [],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            30000
+          ],
+          "instr_count": 807,
+          "time_ms": 0.41026599865290336,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            30000
+          ],
+          "instr_count": 807,
+          "time_ms": 0.4154029993514996,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            30000
+          ],
+          "instr_count": 807,
+          "time_ms": 0.46559299880755134,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            30000
+          ],
+          "instr_count": 708,
+          "time_ms": 0.33950899887713604,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            30000
+          ],
+          "instr_count": 807,
+          "time_ms": 0.6559540015587118,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            30000
+          ],
+          "instr_count": 708,
+          "time_ms": 0.39896000089356676,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            30000
+          ],
+          "instr_count": 807,
+          "time_ms": 0.5739970001741312,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            30000
+          ],
+          "instr_count": 708,
+          "time_ms": 0.4900720014120452,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            30000
+          ],
+          "instr_count": 708,
+          "time_ms": 0.3212830015399959,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            30000
+          ],
+          "instr_count": 708,
+          "time_ms": 0.3357089990458917,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "dce",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            30000
+          ],
+          "instr_count": 708,
+          "time_ms": 0.3638870002760086,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "licm",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            30000
+          ],
+          "instr_count": 708,
+          "time_ms": 0.6940290004422422,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "const_fold",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            30000
+          ],
+          "instr_count": 708,
+          "time_ms": 0.6500899980892427,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "licm",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            30000
+          ],
+          "instr_count": 708,
+          "time_ms": 0.43385400203987956,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "const_fold",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            30000
+          ],
+          "instr_count": 708,
+          "time_ms": 0.6578079992323183,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "dce",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            30000
+          ],
+          "instr_count": 708,
+          "time_ms": 0.340919999871403,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "program": "dead_code",
+      "source_path": "lang/samples/dead_code.nl",
+      "expected": [
+        11
+      ],
+      "baseline": {
+        "passes": [],
+        "compiled": true,
+        "correct": true,
+        "output": [
+          11
+        ],
+        "instr_count": 8,
+        "time_ms": 0.005939000402577221,
+        "error": ""
+      },
+      "optimized": {
+        "passes": [
+          "dce"
+        ],
+        "compiled": true,
+        "correct": true,
+        "output": [
+          11
+        ],
+        "instr_count": 6,
+        "time_ms": 0.004623998393071815,
+        "error": ""
+      },
+      "comparison": {
+        "saved_instructions": 2,
+        "reduction_percent": 25.0,
+        "improved": true
+      },
+      "candidates": [
+        {
+          "passes": [],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            11
+          ],
+          "instr_count": 8,
+          "time_ms": 0.005939000402577221,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            11
+          ],
+          "instr_count": 8,
+          "time_ms": 0.005732999852625653,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            11
+          ],
+          "instr_count": 6,
+          "time_ms": 0.004623998393071815,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            11
+          ],
+          "instr_count": 8,
+          "time_ms": 0.008846000127959996,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            11
+          ],
+          "instr_count": 6,
+          "time_ms": 0.004591998731484637,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            11
+          ],
+          "instr_count": 8,
+          "time_ms": 0.009236999176209792,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            11
+          ],
+          "instr_count": 6,
+          "time_ms": 0.004456000169739127,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            11
+          ],
+          "instr_count": 6,
+          "time_ms": 0.004694997187471017,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            11
+          ],
+          "instr_count": 8,
+          "time_ms": 0.005670997779816389,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            11
+          ],
+          "instr_count": 6,
+          "time_ms": 0.00713500048732385,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "dce",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            11
+          ],
+          "instr_count": 6,
+          "time_ms": 0.007437000022036955,
+          "error": ""
+        },
+        {
+          "passes": [
+            "const_fold",
+            "licm",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            11
+          ],
+          "instr_count": 6,
+          "time_ms": 0.004404002538649365,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "const_fold",
+            "licm"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            11
+          ],
+          "instr_count": 6,
+          "time_ms": 0.006322999979602173,
+          "error": ""
+        },
+        {
+          "passes": [
+            "dce",
+            "licm",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            11
+          ],
+          "instr_count": 6,
+          "time_ms": 0.004259996785549447,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "const_fold",
+            "dce"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            11
+          ],
+          "instr_count": 6,
+          "time_ms": 0.007219001417979598,
+          "error": ""
+        },
+        {
+          "passes": [
+            "licm",
+            "dce",
+            "const_fold"
+          ],
+          "compiled": true,
+          "correct": true,
+          "output": [
+            11
+          ],
+          "instr_count": 6,
+          "time_ms": 0.004362998879514635,
+          "error": ""
+        }
+      ]
+    }
+  ]
+}

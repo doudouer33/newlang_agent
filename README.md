@@ -257,6 +257,30 @@ def save_result(inp): # {"data": dict, "name"?: str}
 
 ### 6. Benchmark Runner：生成对比矩阵
 
+第三周的最小可复现实验已经实现：固定运行原有 5 个样例和新增的
+`dead_code`，对每个程序比较 baseline 与当前全部 pass 排列中的最优结果。
+每个候选先通过正确性检查，再按动态指令数选择最优；完整候选与环境信息会保存到
+`runs/*_benchmark.json`。
+
+```bash
+python -m benchmark.runner --repeat 5
+```
+
+当前结果：
+
+| 程序 | baseline 指令数 | 优化后指令数 | 减少 | 收益 | 最优 Pass |
+|---|---:|---:|---:|---:|---|
+| `basic` | 11 | 11 | 0 | 0.00% | `const_fold` |
+| `branch` | 16 | 16 | 0 | 0.00% | `const_fold` |
+| `loop_sum` | 76 | 76 | 0 | 0.00% | `const_fold` |
+| `array_dot` | 158 | 158 | 0 | 0.00% | `const_fold` |
+| `licm_demo` | 807 | 708 | 99 | 12.27% | `licm` |
+| `dead_code` | 8 | 6 | 2 | 25.00% | `dce` |
+
+六个程序的 baseline 与最优候选全部通过正确性测试，其中两个程序获得严格收益，
+达到阶段三“至少证明 1~2 个程序在正确性不变前提下获得明确收益”的最低标准。
+下面的四档配置矩阵是后续完整实验目标。
+
 ```python
 CONFIGS = ["baseline", "llm_only", "agent_min", "agent_full"]
 
