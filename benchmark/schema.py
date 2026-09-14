@@ -78,9 +78,21 @@ class ExperimentRecord:
     llm_calls: int = 0
     prompt_tokens: int | None = 0
     completion_tokens: int | None = 0
+    reasoning_tokens: int | None = 0
     total_tokens: int | None = 0
     llm_latency_ms: float | None = 0.0
     errors: list[str] = field(default_factory=list)
+
+    # P4-3 原始过程数据。上面的指标描述 selected_best；proposed_best 单独保留，
+    # 防止 baseline 保底掩盖 LLM/Agent 没有提出有效优化的事实。
+    proposed_best: dict[str, Any] | None = None
+    selected_best: dict[str, Any] | None = None
+    used_baseline_fallback: bool = False
+    stop_reason: str | None = None
+    llm_candidate_count: int = 0
+    candidate_results: list[dict[str, Any]] = field(default_factory=list)
+    round_history: list[dict[str, Any]] = field(default_factory=list)
+    llm_usage: list[dict[str, Any]] = field(default_factory=list)
 
     baseline_instr_count: int | None = None
     oracle_instr_count: int | None = None
@@ -104,6 +116,23 @@ class ExperimentRecord:
             raise ValueError("passes 必须是字符串列表")
         if any(not isinstance(error, str) for error in self.errors):
             raise ValueError("errors 必须是字符串列表")
+        for name, value in {
+            "proposed_best": self.proposed_best,
+            "selected_best": self.selected_best,
+        }.items():
+            if value is not None and not isinstance(value, dict):
+                raise ValueError(f"{name} 必须是对象或 None")
+        for name, value in {
+            "candidate_results": self.candidate_results,
+            "round_history": self.round_history,
+            "llm_usage": self.llm_usage,
+        }.items():
+            if not isinstance(value, list) or any(
+                not isinstance(item, dict) for item in value
+            ):
+                raise ValueError(f"{name} 必须是对象列表")
+        if not isinstance(self.used_baseline_fallback, bool):
+            raise ValueError("used_baseline_fallback 必须是 bool")
 
         nonnegative = {
             "instr_count": self.instr_count,
@@ -112,8 +141,10 @@ class ExperimentRecord:
             "rounds": self.rounds,
             "candidate_count": self.candidate_count,
             "llm_calls": self.llm_calls,
+            "llm_candidate_count": self.llm_candidate_count,
             "prompt_tokens": self.prompt_tokens,
             "completion_tokens": self.completion_tokens,
+            "reasoning_tokens": self.reasoning_tokens,
             "total_tokens": self.total_tokens,
             "llm_latency_ms": self.llm_latency_ms,
             "baseline_instr_count": self.baseline_instr_count,

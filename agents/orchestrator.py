@@ -31,9 +31,9 @@ from .optimizer_agent import OptimizerAgent
 from .planner import Planner
 
 
-def _baseline(program: str, source: str) -> Candidate:
+def _baseline(candidate_id: str, source: str) -> Candidate:
     """一个未执行的 baseline 候选：不加任何 pass。每轮新建一个。"""
-    return Candidate(id=f"{program}#baseline", source_program=source,
+    return Candidate(id=candidate_id, source_program=source,
                      passes=[], origin="baseline")
 
 
@@ -47,6 +47,7 @@ def orchestrate(
     expected=None,
     repeat: int = 3,
     save: bool = True,
+    candidate_id_prefix: str | None = None,
     tools=call_tool,
 ):
     """对一个程序跑完整优化闭环，返回 (最优候选, 历史)。
@@ -63,6 +64,7 @@ def orchestrate(
         expected=expected,
         repeat=repeat,
         save=save,
+        candidate_id_prefix=candidate_id_prefix,
         tools=tools,
     )
     return result["best"], result["history"]
@@ -78,6 +80,7 @@ def orchestrate_detailed(
     expected=None,
     repeat: int = 3,
     save: bool = True,
+    candidate_id_prefix: str | None = None,
     tools=call_tool,
 ):
     """运行优化闭环并返回阶段四实验需要的完整过程元数据。
@@ -104,16 +107,24 @@ def orchestrate_detailed(
     usage_events = []
     stop_reason = "max_rounds"
     last_optimizer_failed = False
+    id_prefix = candidate_id_prefix or program
 
     for r in range(max_rounds):
         plan = planner.run(context)
-        opt_out = optimizer.run({**context, **plan})
+        round_id_prefix = f"{id_prefix}:r{r + 1}"
+        opt_out = optimizer.run({
+            **context,
+            **plan,
+            "candidate_id_prefix": round_id_prefix,
+        })
         round_usage = _drain_usage(llm)
         usage_events.extend(round_usage)
         last_optimizer_failed = bool(opt_out.get("error")) and not opt_out["candidates"]
 
         # baseline 锚点 + LLM 候选，一起交给 Executor 真跑。
-        batch = [_baseline(program, source)] + opt_out["candidates"]
+        batch = [
+            _baseline(f"{round_id_prefix}:baseline", source)
+        ] + opt_out["candidates"]
         exe_out = executor.run(
             {"candidates": batch, "expected": expected, "repeat": repeat})
         verdict = evaluator.run(

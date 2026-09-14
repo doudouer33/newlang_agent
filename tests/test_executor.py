@@ -45,6 +45,7 @@ def test_fills_candidate_end_to_end():
     assert out["results"][0] is cand              # 原地回填，返回同一个对象
     assert cand.compiled is True
     assert cand.correct is True
+    assert cand.output == [55]
     assert isinstance(cand.instr_count, int) and cand.instr_count > 0
     assert cand.exec_time_ms is not None
     assert cand.peak_memory_kb is not None and cand.peak_memory_kb >= 0.0
@@ -133,6 +134,7 @@ def test_calls_tools_in_order():
     Executor(tools=router).run({"candidates": [cand], "expected": [1]})
     assert router.calls == ["build", "run_tests", "run_bench"]
     assert cand.instr_count == 5 and cand.correct is True
+    assert cand.output == [1]
     assert cand.peak_memory_kb == 12.5
 
 

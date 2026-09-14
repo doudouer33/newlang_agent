@@ -49,7 +49,7 @@ def pass_combinations(names=None):
     ]
 
 
-def _load_sample(name: str):
+def load_sample(name: str):
     path = os.path.join(SAMPLES_DIR, name + ".nl")
     if not os.path.isfile(path):
         raise FileNotFoundError(f"找不到样例：{path}")
@@ -61,7 +61,12 @@ def _load_sample(name: str):
     return path, source, expected
 
 
-def _measure(source: str, expected: list[int], passes: tuple[str, ...], repeat: int):
+def measure_candidate(
+    source: str,
+    expected: list[int],
+    passes: tuple[str, ...] | list[str],
+    repeat: int,
+):
     """编译、验证、测量一个候选；所有失败都进入结果，不中断整场实验。"""
     row = {
         "passes": list(passes),
@@ -95,12 +100,25 @@ def _measure(source: str, expected: list[int], passes: tuple[str, ...], repeat: 
     return row
 
 
+# 兼容旧的包内调用；阶段四矩阵使用上面的公开名字。
+_load_sample = load_sample
+_measure = measure_candidate
+
+
 def _viable(row):
     return row["compiled"] and row["correct"] and row["instr_count"] is not None
 
 
 def _best_optimized(candidates):
-    viable = [row for row in candidates if row["passes"] and _viable(row)]
+    return select_best(candidates, optimized_only=True)
+
+
+def select_best(candidates, *, optimized_only: bool = False):
+    """稳定选择最佳可行候选；Oracle 可包含 baseline，阶段三可排除它。"""
+    viable = [
+        row for row in candidates
+        if _viable(row) and (row["passes"] or not optimized_only)
+    ]
     if not viable:
         return None
     return min(
@@ -131,8 +149,10 @@ def run_benchmark(samples=None, *, repeat: int = 5, save: bool = True):
     programs = []
 
     for name in sample_names:
-        path, source, expected = _load_sample(name)
-        candidates = [_measure(source, expected, combo, repeat) for combo in combos]
+        path, source, expected = load_sample(name)
+        candidates = [
+            measure_candidate(source, expected, combo, repeat) for combo in combos
+        ]
         baseline = candidates[0]
         optimized = _best_optimized(candidates)
         programs.append({

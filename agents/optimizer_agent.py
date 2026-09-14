@@ -33,6 +33,7 @@ class OptimizerAgent(BaseAgent):
 
     def run(self, context: dict) -> dict:
         program = context.get("program", "program")     # 样例名，用作标签和 id 前缀
+        candidate_id_prefix = context.get("candidate_id_prefix", program)
         source = context.get("source")                  # 源码文本
         allowed = list(context.get("available_passes") or available_passes())
         feedback = context.get("feedback")              # 上一轮 Evaluator 的建议（可选）
@@ -54,7 +55,7 @@ class OptimizerAgent(BaseAgent):
             }
 
         candidates, raw_count, rejected = self._to_candidates(
-            program, source, data.get("candidates", []), set(allowed), n
+            candidate_id_prefix, source, data.get("candidates", []), set(allowed), n
         )
         return {
             "candidates": candidates,
@@ -95,7 +96,7 @@ class OptimizerAgent(BaseAgent):
         return "\n".join(parts)
 
     # ---- 清洗 LLM 草案 → 一批 Candidate ----
-    def _to_candidates(self, program, source, raw, allowed_set, n):
+    def _to_candidates(self, candidate_id_prefix, source, raw, allowed_set, n):
         if not isinstance(raw, list):
             return [], 0, [{"item": raw, "reason": "candidates_not_list"}]
 
@@ -122,8 +123,10 @@ class OptimizerAgent(BaseAgent):
             seen.add(key)
             rejected_items.extend(rejected)
             out.append(Candidate(
-                id=f"{program}#llm:{'+'.join(passes)}",
-                source_program=source if source is not None else program,
+                id=f"{candidate_id_prefix}:llm:{'+'.join(passes)}",
+                source_program=(
+                    source if source is not None else str(candidate_id_prefix)
+                ),
                 passes=passes,
                 origin="llm",
             ))

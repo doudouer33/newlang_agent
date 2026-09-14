@@ -24,7 +24,7 @@
 ## 系统架构
 
 ```
-输入：语言需求 / 示例程序 / 目标平台 / 测试要求
+输入：固定样例源码 / baseline IR / 优化约束
         │
    ┌────┴─────┐     ┌──────────┐     ┌──────────────┐
    │  LLM 层  │ →   │ Agent 层 │ →   │  工具链层    │
@@ -80,6 +80,8 @@ newlang-agent/
 ├── benchmark/                 # D组：对比实验
 │   ├── configs.py             # 阶段四固定样例与四档 + Oracle 实验协议
 │   ├── schema.py              # 阶段四矩阵实验的统一记录格式
+│   ├── matrix.py              # 四档 + Oracle、多 trial 统一实验入口
+│   ├── report.py              # schema v2 JSON → 确定性 Markdown 报告
 │   └── runner.py              # 跑 baseline 与穷举优化档的可复现对比
 │
 ├── runs/                      # 所有实验产物（日志 / 结果 / JSON），按时间戳
@@ -87,9 +89,8 @@ newlang-agent/
 ```
 
 上面只列出当前已落地的目录和文件。目录结构直接对应四组分工（A/B/C/D），
-每个文件夹就是一个组的交付边界。四档配置及统一数据契约已经落地；
-`benchmark/matrix.py` 和 `benchmark/report.py` 仍是阶段四待交付内容，
-不在当前目录树中预先列出。
+每个文件夹就是一个组的交付边界。四档配置、统一数据契约、矩阵 runner 和报告
+生成器均已落地；正式 DeepSeek 多 trial 数据与最终报告文件将在 P4-6 生成。
 
 ---
 
@@ -294,21 +295,42 @@ python -m benchmark.runner --repeat 5
 
 六个程序的 baseline 与最优候选全部通过正确性测试，其中两个程序获得严格收益，
 达到阶段三“至少证明 1~2 个程序在正确性不变前提下获得明确收益”的最低标准。
-下面的四档配置矩阵是后续完整实验目标。
 
-```python
-CONFIGS = ["baseline", "llm_only", "agent_min", "agent_full"]
+阶段四的统一矩阵 runner 也已经实现。快速验证 baseline + Oracle 不需要 API key：
 
-def run_matrix(programs, repeat=5):
-    rows = []
-    for prog in programs:
-        for cfg in CONFIGS:
-            best = run_with_config(prog, cfg)   # 不同档次跑同一程序
-            for _ in range(repeat):             # 重复多次取中位数
-                metrics = measure(best)
-                rows.append({"program": prog, "config": cfg, **metrics})
-    return rows
+```bash
+python -m benchmark.matrix \
+  --samples licm_demo dead_code \
+  --configs baseline oracle \
+  --trials 1 \
+  --bench-repeat 1 \
+  --no-save
 ```
+
+不指定 `--samples` / `--configs` 时运行固定 5 个正式样例与四档系统 + Oracle。
+真实 LLM 档使用 DeepSeek；完整正式实验留到 P4-6 执行。每条 schema v2 记录保留
+trial、候选明细、轮次历史、LLM usage、提案最佳与 baseline 保底后的最终选择。
+
+已有矩阵 JSON 后，可完全离线、确定性地生成 Markdown 报告：
+
+```bash
+python -m benchmark.report \
+  runs/final_matrix.json \
+  --output docs/final_report.md \
+  --strict
+```
+
+报告对多 trial 指标取中位数，对 LLM 调用与 token 取总量；缺失指标显示 `—`。
+Agent 搜索质量使用 `proposed_best`，系统性能使用含 baseline 保底的 `selected_best`，
+避免把保底结果误报为 Agent 自己找到的优化。
+
+P4-5 的配置、指标、错误路径、报告和离线端到端测试均不访问真实 LLM：
+
+```bash
+.venv/bin/python -m pytest -q
+```
+
+当前全量回归为 160 项通过；测试运行前后不会在 `runs/` 留下临时文件。
 
 - `baseline`：不应用 Pass、不调用 LLM，是所有对比的锚点
 - `llm_only`：只调用一次 LLM、只执行一个 LLM 候选，不迭代

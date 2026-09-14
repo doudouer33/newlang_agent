@@ -22,12 +22,13 @@
 - [x] 已冻结四档实验配置和统一结果 schema。
 - [x] 已采集 LLM 调用次数、token、耗时和成功/失败事件。
 - [x] 已采集 VM 峰值内存，并提供详细编排结果。
-- [x] 当前全量测试 132 项通过。
+- [x] 已实现四档 + Oracle 统一矩阵 runner 和 CLI。
+- [x] 已实现 schema v2 JSON 到 Markdown 的确定性报告生成器。
+- [x] 当前全量测试 160 项通过。
 
 ### 1.2 当前缺口
 
-- [ ] 尚无 `baseline / llm_only / agent_min / agent_full` 四档完整对比。
-- [ ] 尚无 `benchmark/report.py`。
+- [ ] 尚未执行真实 DeepSeek 的正式多 trial 四档结果。
 - [ ] 尚无由正式实验 JSON 自动生成的最终报告。
 
 ### 1.3 当前已知基准结果
@@ -151,19 +152,19 @@ context = {
     如果本轮没有刷新历史最优，收敛停止
 ```
 
-这条链现在已经能运行。P4-2 已将过程数据补齐；下一步 P4-3 是把它包装成统一的
-四档矩阵实验入口。
+这条链现在已经能运行。P4-2 已将过程数据补齐，P4-3 已将它包装成统一的四档矩阵
+实验入口；下一步是从 schema v2 JSON 生成报告。
 
 ### 2.7 LLM 和 Agent 在阶段四的具体缺口
 
 - [x] `DeepSeekClient.complete_json()` 已保留 API usage，可报告 token。
 - [x] client 已保存每次 LLM 调用耗时和成功/失败状态。
 - [x] `OptimizerAgent` 已结构化记录原始候选数、接受数和清洗拒绝原因。
-- [ ] `orchestrate()` 只有通用 `max_rounds` 和 `n_candidates`，还没有映射成四档实验配置。
-- [ ] `orchestrate()` 落盘结构没有 config、trial、模型、token、环境和停止原因。
-- [ ] `Candidate.origin="agent"` 当前没有在编排中实际使用，不能依靠 origin 生成四档报告。
+- [x] `benchmark.matrix` 已将通用编排参数映射成四档冻结配置。
+- [x] 矩阵 schema 已记录 config、trial、模型、token、环境和停止原因。
+- [x] 矩阵记录以 `config` 明确分档，不再依靠 `Candidate.origin` 推断档位。
 - [x] LLM 候选全部失败或无收益时，详细编排结果会标明 `used_baseline_fallback=true`。
-- [ ] 每轮候选 ID 目前可重复；正式记录需要通过 `run_id + trial + round + candidate` 唯一定位。
+- [x] 候选 ID 已通过 `matrix_id + program + config + trial + round + candidate` 唯一定位。
 
 ---
 
@@ -174,9 +175,9 @@ context = {
 | 0 | P4-0 环境与现有基线验收 | 已有 `.venv` 的环境校验和基线验收记录 | 无 |
 | 1 | P4-1 实验协议与数据结构（已完成） | `benchmark/configs.py`、`benchmark/schema.py` | P4-0 |
 | 2 | P4-2 指标采集（已完成） | LLM telemetry、内存指标、编排元数据 | P4-1 |
-| 3 | P4-3 四档矩阵实验 | `benchmark/matrix.py` | P4-1、P4-2 |
-| 4 | P4-4 报告生成器 | `benchmark/report.py` | P4-3 |
-| 5 | P4-5 完整测试 | 新增测试集 | P4-2、P4-3、P4-4 |
+| 3 | P4-3 四档矩阵实验（已完成） | `benchmark/matrix.py` | P4-1、P4-2 |
+| 4 | P4-4 报告生成器（已完成） | `benchmark/report.py` | P4-3 |
+| 5 | P4-5 完整测试（已完成） | 新增测试集 | P4-2、P4-3、P4-4 |
 | 6 | P4-6 正式实验 | `runs/final_matrix.json`、`docs/final_report.md` | P4-5 |
 | 7 | P4-7 文档和仓库封板 | 最终 README、周报、干净仓库 | P4-6 |
 
@@ -574,7 +575,7 @@ peak_memory_kb
 - benchmark 回归：6/6 正确，2/6 严格收益。
 - Python compileall、`git diff --check` 和密钥模式扫描均通过。
 
-P4-2 已完成，下一步进入 P4-3。
+P4-2 已完成；P4-3 也已完成，下一步进入 P4-4。
 
 ---
 
@@ -767,16 +768,31 @@ python3 -m benchmark.matrix \
 
 ### 7.10 完成判定
 
-- [ ] baseline 和 oracle 可在无 API key 时运行。
-- [ ] 四档可通过同一 CLI 运行。
-- [ ] `llm_only` 真实只有一次 LLM 调用和一个 LLM 候选。
-- [ ] `agent_min` 真实只跑一轮，但可评测多个候选。
-- [ ] `agent_full` 能把 Evaluator 反馈传到下一轮并正确记录收敛。
-- [ ] LLM/Agent 提案结果与 baseline 保底后的系统结果被分开保存。
-- [ ] Stub LLM 可完成全矩阵离线测试。
-- [ ] 结果包含 trial 原始记录，而不只是汇总值。
-- [ ] 每个配置失败时都有明确错误。
-- [ ] 同一输入和 Stub 返回能产生结构相同的 JSON。
+- [x] baseline 和 oracle 可在无 API key 时运行。
+- [x] 四档可通过同一 CLI 运行。
+- [x] `llm_only` 真实只有一次 LLM 调用和一个 LLM 候选。
+- [x] `agent_min` 真实只跑一轮，但可评测多个候选。
+- [x] `agent_full` 能把 Evaluator 反馈传到下一轮并正确记录收敛。
+- [x] LLM/Agent 提案结果与 baseline 保底后的系统结果被分开保存。
+- [x] Stub LLM 可完成全矩阵离线测试。
+- [x] 结果包含 trial 原始记录，而不只是汇总值。
+- [x] 每个配置失败时都有明确错误。
+- [x] 同一输入和 Stub 返回能产生结构相同的 JSON。
+
+### 7.11 验收记录（2026-09-14）
+
+- 新增 `benchmark/matrix.py`，提供 `run_profile()`、`run_matrix()` 和统一 CLI。
+- baseline 与 Oracle 直接复用 Executor 及 `benchmark.runner` 的测量/稳定选优能力，
+  不构造 DeepSeek client。
+- schema v2 原始记录包含 `proposed_best`、`selected_best`、baseline 保底标记、
+  候选明细、轮次历史、LLM usage、比较锚点与收益字段。
+- CLI 冒烟：`licm_demo / dead_code × baseline / oracle` 共 4/4 条记录正确，
+  LLM 调用 0 次。
+- 固定 5 样例 × 全部 5 配置的 Stub 矩阵共 25/25 条记录正确；档位合计
+  20 次 LLM 调用，`agent_full` 能收到上轮反馈并提前收敛。
+- 全量回归：143 项通过（6.81s）；compileall 与 `git diff --check` 通过。
+
+P4-3 已完成；P4-4 也已完成，下一步进入 P4-5。
 
 ---
 
@@ -861,11 +877,28 @@ input                         # 必填，矩阵 JSON
 
 ### 8.7 完成判定
 
-- [ ] 可从离线 fixture JSON 生成完整 Markdown。
-- [ ] 相同输入的报告内容确定。
-- [ ] 不依赖 API key 或网络。
-- [ ] 无效 JSON 和不兼容 schema 有清晰报错。
-- [ ] 表格数据可逐项追溯到输入 JSON。
+- [x] 可从离线 fixture JSON 生成完整 Markdown。
+- [x] 相同输入的报告内容确定。
+- [x] 不依赖 API key 或网络。
+- [x] 无效 JSON 和不兼容 schema 有清晰报错。
+- [x] 表格数据可逐项追溯到输入 JSON。
+
+### 8.8 验收记录（2026-09-14）
+
+- 新增 `benchmark/report.py`，支持输入路径、`--output`、`--title` 和 `--strict`。
+- 报告固定生成 15 个章节以及性能、搜索质量、LLM 成本三类核心表格。
+- 多 trial 的指令数、收益、时间、内存与轮数按中位数汇总；调用次数、token 和
+  LLM 耗时按总量汇总。
+- 缺失指标显示 `—`，百分比固定两位小数，时间和内存单位写入表头。
+- Agent 搜索质量基于 `proposed_best`，系统性能基于 `selected_best`，不会把
+  baseline 保底或 Oracle 写成 Agent 自身成果。
+- 严格模式检查矩阵完整性、重复记录和收益派生字段是否与原始指标一致。
+- 本地真实链路验收：2 样例 × baseline/Oracle 共 4 条记录生成 15 节 Markdown，
+  全部正确且未写入临时文件。
+- 报告专项测试 11 项通过；全量回归 154 项通过（4.91s）；compileall 和
+  `git diff --check` 通过。
+
+P4-4 已完成；P4-5 也已完成，下一步进入 P4-6。
 
 ---
 
@@ -887,44 +920,44 @@ tests/test_report.py
 
 ### 9.3 配置测试
 
-- [ ] `baseline` 不调用 LLM。
-- [ ] `llm_only` 只调用一次 LLM，只执行一个 LLM 候选。
-- [ ] `agent_min` 仅运行一轮，且允许多候选。
-- [ ] `agent_full` 能把反馈传入下一轮。
-- [ ] `agent_full` 能在收敛时提前停止。
-- [ ] `oracle` 不调用 LLM 且穷举 16 种配置。
+- [x] `baseline` 不调用 LLM。
+- [x] `llm_only` 只调用一次 LLM，只执行一个 LLM 候选。
+- [x] `agent_min` 仅运行一轮，且允许多候选。
+- [x] `agent_full` 能把反馈传入下一轮。
+- [x] `agent_full` 能在收敛时提前停止。
+- [x] `oracle` 不调用 LLM 且穷举 16 种配置。
 
 ### 9.4 指标测试
 
-- [ ] Stub LLM 的 token 能正确汇总。
-- [ ] LLM usage 缺失时保存 `None`。
-- [ ] LLM 异常时仍记录调用次数和耗时。
-- [ ] 指令数在多次执行中一致。
-- [ ] 时间取中位数。
-- [ ] 内存峰值为非负数。
-- [ ] 正确性失败时不生成伪收益。
+- [x] Stub LLM 的 token 能正确汇总。
+- [x] LLM usage 缺失时保存 `None`。
+- [x] LLM 异常时仍记录调用次数和耗时。
+- [x] 指令数在多次执行中一致。
+- [x] 时间取中位数。
+- [x] 内存峰值为非负数。
+- [x] 正确性失败时不生成伪收益。
 
 ### 9.5 错误路径测试
 
-- [ ] LLM 返回非法 JSON。
-- [ ] LLM 返回空候选。
-- [ ] LLM 返回未注册 Pass。
-- [ ] 候选编译失败。
-- [ ] 候选运行时异常。
-- [ ] 候选输出与 expected 不同。
-- [ ] 某配置失败后其他配置继续运行。
-- [ ] 某样例失败后其他样例继续运行。
+- [x] LLM 返回非法 JSON。
+- [x] LLM 返回空候选。
+- [x] LLM 返回未注册 Pass。
+- [x] 候选编译失败。
+- [x] 候选运行时异常。
+- [x] 候选输出与 expected 不同。
+- [x] 某配置失败后其他配置继续运行。
+- [x] 某样例失败后其他样例继续运行。
 
 这些错误用 Stub 和假工具验证即可，不需要为了报告人为伪造真实实验失败。
 
 ### 9.6 报告测试
 
-- [ ] 成功记录能生成完整表格。
-- [ ] 失败记录能生成失败摘要。
-- [ ] 缺失指标显示 `—`。
-- [ ] 百分比和中位数计算正确。
-- [ ] 报告不将 Oracle 写成 Agent 结果。
-- [ ] 相同 fixture 产生相同正文。
+- [x] 成功记录能生成完整表格。
+- [x] 失败记录能生成失败摘要。
+- [x] 缺失指标显示 `—`。
+- [x] 百分比和中位数计算正确。
+- [x] 报告不将 Oracle 写成 Agent 结果。
+- [x] 相同 fixture 产生相同正文。
 
 ### 9.7 端到端测试
 
@@ -954,11 +987,25 @@ python3 -m benchmark.matrix \
 
 ### 9.9 完成判定
 
-- [ ] 全部旧测试通过。
-- [ ] 全部新测试通过。
-- [ ] 测试不访问真实 LLM API。
-- [ ] 测试不在 `runs/` 留下临时文件。
-- [ ] 运行前后 Git 工作区状态一致。
+- [x] 全部旧测试通过。
+- [x] 全部新测试通过。
+- [x] 测试不访问真实 LLM API。
+- [x] 测试不在 `runs/` 留下临时文件。
+- [x] 运行前后 Git 工作区状态一致。
+
+### 9.10 验收记录（2026-09-14）
+
+- 新增 `tests/test_metrics.py`，精确覆盖 Stub token 汇总、usage 缺失、LLM 失败
+  telemetry、bench 时间中位数、指令数稳定性、内存非负和错误结果无伪收益。
+- 新增 `tests/test_e2e.py`，完整运行 `Stub LLM → 五配置矩阵 → JSON 往返 →
+  严格 schema 校验 → 15 节 Markdown 报告`，全程不访问网络。
+- 配置、错误路径和报告要求由已有测试与新增专项测试共同覆盖。
+- 全量回归：160 项通过（7.01s）。
+- 阶段三 benchmark 回归：6/6 正确，2/6 获得严格收益。
+- 阶段四 baseline/Oracle CLI 冒烟：4/4 记录正确、0 次 LLM 调用。
+- `runs/` 文件数在测试前后均为 4；compileall 与 `git diff --check` 通过。
+
+P4-5 已完成。提交 P4-3～P4-5 后进入 P4-6 正式实验。
 
 ---
 
@@ -1159,8 +1206,8 @@ diff -u docs/final_report.md /tmp/newlang-final-report.md
 
 - [x] `benchmark/configs.py`
 - [x] `benchmark/schema.py`
-- [ ] `benchmark/matrix.py`
-- [ ] `benchmark/report.py`
+- [x] `benchmark/matrix.py`
+- [x] `benchmark/report.py`
 - [x] LLM telemetry 实现
 - [x] benchmark 内存指标实现
 - [x] orchestrator 实验元数据实现
@@ -1170,10 +1217,10 @@ diff -u docs/final_report.md /tmp/newlang-final-report.md
 - [x] 配置测试
 - [x] schema 测试
 - [x] telemetry 测试
-- [ ] 矩阵测试
-- [ ] 报告测试
-- [ ] 错误路径测试
-- [ ] 离线端到端测试
+- [x] 矩阵测试
+- [x] 报告测试
+- [x] 错误路径测试
+- [x] 离线端到端测试
 
 ### 数据与报告
 

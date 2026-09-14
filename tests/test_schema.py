@@ -33,6 +33,14 @@ def _record(**overrides):
         "completion_tokens": 20,
         "total_tokens": 120,
         "llm_latency_ms": 300.0,
+        "proposed_best": {"passes": ["licm"], "instr_count": 708},
+        "selected_best": {"passes": ["licm"], "instr_count": 708},
+        "used_baseline_fallback": False,
+        "stop_reason": "converged",
+        "llm_candidate_count": 4,
+        "candidate_results": [{"passes": ["licm"]}],
+        "round_history": [{"round": 1}],
+        "llm_usage": [{"total_tokens": 120}],
     }
     values.update(overrides)
     return ExperimentRecord(**values)
@@ -144,6 +152,12 @@ def test_invalid_record_is_rejected():
              llm_calls=-1),
         dict(run_id="r", program="branch", config="baseline", trial=1,
              reduction_percent=0.0),
+        dict(run_id="r", program="branch", config="baseline", trial=1,
+             proposed_best=[]),
+        dict(run_id="r", program="branch", config="baseline", trial=1,
+             candidate_results=["not-an-object"]),
+        dict(run_id="r", program="branch", config="baseline", trial=1,
+             used_baseline_fallback="yes"),
     ]
     for values in cases:
         try:

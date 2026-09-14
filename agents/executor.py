@@ -91,6 +91,7 @@ class Executor(BaseAgent):
             tested = self.tools("run_tests",
                                {"bytecode": bytecode, "expected": expected})
             cand.correct = bool(tested.get("correct"))
+            cand.output = tested.get("output")
             if tested.get("error"):
                 cand.error = tested["error"]        # 运行期异常（死循环/越界/除零…）
 

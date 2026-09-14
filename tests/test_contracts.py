@@ -18,6 +18,7 @@ def test_new_candidate_has_unfilled_defaults():
     c = Candidate(id="x", source_program="loop_sum", passes=["dce"], origin="llm")
     assert c.compiled is False
     assert c.correct is False
+    assert c.output is None
     assert c.exec_time_ms is None
     assert c.peak_memory_kb is None
     assert c.instr_count is None
@@ -44,7 +45,7 @@ def test_round_trip_dict():
     """to_dict → from_dict 原样还原，日志落盘再读回不丢信息。"""
     c = Candidate(
         id="loop_sum#dce", source_program="loop_sum", passes=["const_fold", "dce"],
-        origin="agent", compiled=True, correct=True, exec_time_ms=1.5,
+        origin="agent", compiled=True, correct=True, output=[42], exec_time_ms=1.5,
         peak_memory_kb=12.5, instr_count=42,
     )
     assert Candidate.from_dict(c.to_dict()) == c
