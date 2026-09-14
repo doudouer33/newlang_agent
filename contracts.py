@@ -39,6 +39,7 @@ class Candidate:
     compiled: bool = False        # build 是否成功（语法/pass 都没炸）
     correct: bool = False         # 功能测试是否通过（铁律：先过这个再比性能）
     exec_time_ms: float | None = None   # 运行耗时（会抖，仅参考）
+    peak_memory_kb: float | None = None # VM 单次运行的 Python 峰值分配（仅参考）
     instr_count: int | None = None      # 执行指令数（确定性，收益主对比信号）
     error: str | None = None      # 任一环节的失败原因，一句人能看懂的话
 

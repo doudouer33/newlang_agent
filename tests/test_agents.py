@@ -48,6 +48,11 @@ def test_unknown_passes_are_filtered():
     out = _agent(stub).run({"program": "p", "source": SRC})
     assert len(out["candidates"]) == 1
     assert out["candidates"][0].passes == ["dce"]              # 只剩合法的
+    assert out["raw_candidate_count"] == 1
+    assert out["accepted_candidate_count"] == 1
+    assert [item["reason"] for item in out["rejected_items"]] == [
+        "unknown_pass", "unknown_pass"
+    ]
 
 
 def test_empty_combo_dropped():
@@ -55,6 +60,9 @@ def test_empty_combo_dropped():
     stub = {"candidates": [{"passes": ["nope"]}, {"passes": []}]}
     out = _agent(stub).run({"program": "p", "source": SRC})
     assert out["candidates"] == []
+    assert out["raw_candidate_count"] == 2
+    assert out["accepted_candidate_count"] == 0
+    assert out["rejected_items"]
 
 
 def test_duplicate_pass_sequences_deduped():
@@ -69,12 +77,25 @@ def test_duplicate_pass_sequences_deduped():
     assert seqs == [["const_fold", "dce"], ["dce", "const_fold"]]
 
 
+def test_duplicate_pass_inside_candidate_is_removed_and_reported():
+    out = _agent({
+        "candidates": [{"passes": ["dce", "dce", "licm"]}]
+    }).run({"program": "p", "source": SRC})
+    assert out["candidates"][0].passes == ["dce", "licm"]
+    assert out["rejected_items"] == [{"item": "dce", "reason": "duplicate_pass"}]
+
+
 def test_respects_candidate_limit():
     """最多返回 n 个候选。"""
     stub = {"candidates": [{"passes": ["dce"]}, {"passes": ["licm"]},
                            {"passes": ["const_fold"]}, {"passes": ["const_fold", "dce"]}]}
     out = _agent(stub).run({"program": "p", "source": SRC, "n": 2})
     assert len(out["candidates"]) == 2
+    assert out["raw_candidate_count"] == 4
+    assert out["accepted_candidate_count"] == 2
+    assert sum(
+        item["reason"] == "candidate_limit" for item in out["rejected_items"]
+    ) == 2
 
 
 def test_prompt_contains_ir_and_passes_and_feedback():
@@ -107,6 +128,8 @@ def test_llm_error_returns_empty_not_raise():
     out = OptimizerAgent(llm=StubLLMClient(boom)).run({"program": "p", "source": SRC})
     assert out["candidates"] == []
     assert "模拟网络错" in out["error"]
+    assert out["raw_candidate_count"] == 0
+    assert out["accepted_candidate_count"] == 0
 
 
 def test_malformed_llm_output_tolerated():
@@ -116,6 +139,15 @@ def test_malformed_llm_output_tolerated():
     # 直接给 pass 数组（没包 dict）也能认
     out2 = _agent({"candidates": [["dce", "licm"]]}).run({"program": "p", "source": SRC})
     assert out2["candidates"][0].passes == ["dce", "licm"]
+
+
+def test_non_list_candidates_are_reported():
+    out = _agent({"candidates": {"passes": ["dce"]}}).run(
+        {"program": "p", "source": SRC}
+    )
+    assert out["candidates"] == []
+    assert out["raw_candidate_count"] == 0
+    assert out["rejected_items"][0]["reason"] == "candidates_not_list"
 
 
 def main():

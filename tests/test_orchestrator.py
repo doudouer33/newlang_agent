@@ -14,8 +14,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from agents import Planner, orchestrate                         # noqa: E402
-from llm import StubLLMClient                                   # noqa: E402
+from agents import Planner, orchestrate, orchestrate_detailed   # noqa: E402
+from llm import LLMError, StubLLMClient                         # noqa: E402
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(_HERE)
@@ -98,6 +98,73 @@ def test_history_records_baseline_and_winner():
     assert "baseline" in origins and "llm" in origins    # 锚点和候选都在排名里
 
 
+def test_detailed_result_contains_usage_rounds_and_candidates():
+    src = _sample("licm_demo.nl")
+    llm = StubLLMClient(
+        {"candidates": [{"passes": ["licm"]}]},
+        usage={"prompt_tokens": 10, "completion_tokens": 2, "total_tokens": 12},
+    )
+    result = orchestrate_detailed(
+        "licm_demo", src, llm=llm, max_rounds=3, save=False
+    )
+
+    assert result["best"].passes == ["licm"]
+    assert result["rounds"] == 2
+    assert result["stop_reason"] == "converged"
+    assert result["candidate_count"] == 4       # 每轮 baseline + 一个 LLM 候选
+    assert result["llm_candidate_count"] == 2
+    assert result["used_baseline_fallback"] is False
+    assert result["llm_usage_summary"]["llm_calls"] == 2
+    assert result["llm_usage_summary"]["successful_calls"] == 2
+    assert result["llm_usage_summary"]["total_tokens"] == 24
+    assert len(result["history"][0]["llm_usage"]) == 1
+    assert result["history"][0]["accepted_candidate_count"] == 1
+    assert result["history"][0]["viable_count"] == 2
+    assert result["history"][0]["rejected_count"] == 0
+    assert result["history"][0]["improved"] is True
+    assert result["history"][1]["converged"] is True
+
+
+def test_detailed_result_marks_baseline_fallback():
+    src = _sample("loop_sum.nl")
+    result = orchestrate_detailed(
+        "loop_sum", src, llm=_stub([["const_fold"]]),
+        max_rounds=1, save=False,
+    )
+    assert result["best"].origin == "baseline"
+    assert result["used_baseline_fallback"] is True
+    assert result["stop_reason"] == "max_rounds"
+
+
+def test_detailed_result_marks_llm_failure():
+    def boom(user, system, schema):
+        raise LLMError("模拟网络错误")
+
+    result = orchestrate_detailed(
+        "loop_sum", _sample("loop_sum.nl"),
+        llm=StubLLMClient(boom), max_rounds=1, save=False,
+    )
+    assert result["best"].origin == "baseline"
+    assert result["used_baseline_fallback"] is True
+    assert result["stop_reason"] == "llm_error"
+    assert result["llm_usage_summary"]["llm_calls"] == 1
+    assert result["llm_usage_summary"]["failed_calls"] == 1
+    assert result["history"][0]["opt_error"]
+
+
+def test_detailed_result_discards_stale_usage_before_run():
+    src = _sample("loop_sum.nl")
+    llm = _stub([["const_fold"]])
+    llm.complete_json("这次调用不属于实验")
+    assert len(llm.usage_events) == 1
+
+    result = orchestrate_detailed(
+        "loop_sum", src, llm=llm, max_rounds=1, save=False
+    )
+    assert result["llm_usage_summary"]["llm_calls"] == 1
+    assert llm.usage_events == []
+
+
 def test_persists_run_to_disk():
     """save=True 时把整轮实验写成 runs/*.json；测完清理掉。"""
     src = _sample("licm_demo.nl")
@@ -112,6 +179,10 @@ def test_persists_run_to_disk():
         assert data["program"] == "licm_demo"
         assert data["best"]["passes"] == ["licm"]
         assert len(data["rounds"]) == 1
+        assert data["round_count"] == 1
+        assert data["stop_reason"] == "max_rounds"
+        assert data["llm_usage_summary"]["llm_calls"] == 1
+        assert data["used_baseline_fallback"] is False
     finally:
         for f in new:                               # 不把测试产物留在 runs/
             os.remove(os.path.join(_RUNS, f))

@@ -161,6 +161,8 @@ def test_bench_returns_metrics():
     assert out["error"] == ""
     assert isinstance(out["instr_count"], int) and out["instr_count"] > 0
     assert isinstance(out["time_ms"], float) and out["time_ms"] >= 0.0
+    assert isinstance(out["peak_memory_kb"], float)
+    assert out["peak_memory_kb"] >= 0.0
 
 
 def test_bench_instr_count_is_deterministic():
@@ -209,6 +211,15 @@ def test_bench_runtime_error_is_reported_not_raised():
     assert out["error"]
     assert out["instr_count"] is None      # 不谎报成 0
     assert out["time_ms"] is None
+    assert out["peak_memory_kb"] is None
+
+
+def test_bench_rejects_invalid_repeat():
+    out = run_bench({"bytecode": [("print", None, 1, None)], "repeat": 0})
+    assert out["error"]
+    assert out["instr_count"] is None
+    assert out["time_ms"] is None
+    assert out["peak_memory_kb"] is None
 
 
 # ==================================================================

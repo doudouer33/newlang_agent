@@ -70,6 +70,7 @@ def _measure(source: str, expected: list[int], passes: tuple[str, ...], repeat: 
         "output": None,
         "instr_count": None,
         "time_ms": None,
+        "peak_memory_kb": None,
         "error": "",
     }
 
@@ -88,6 +89,7 @@ def _measure(source: str, expected: list[int], passes: tuple[str, ...], repeat: 
     bench = run_bench({"bytecode": built["bytecode"], "repeat": repeat})
     row["instr_count"] = bench.get("instr_count")
     row["time_ms"] = bench.get("time_ms")
+    row["peak_memory_kb"] = bench.get("peak_memory_kb")
     if bench.get("error") and not row["error"]:
         row["error"] = bench["error"]
     return row

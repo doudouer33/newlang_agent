@@ -4,11 +4,14 @@
 
 做一个"会设计、会优化、会测试"的新语言编译系统。核心不是传统编译器，而是**用 LLM + Agent 驱动编译系统的设计、优化与测试闭环**。
 
-一句话理解整条链：
+一句话理解当前已经落地的链路：
 
-> 自然语言描述 →（LLM + Agent）生成新语言的 token / AST / IR 和编译器 → 用新语言写几个样例程序 →（Agent）对这些程序做优化闭环 → 跟内部基线对比证明收益。
+> 人工实现并固定小语言、AST / IR 和编译工具链 → LLM 阅读源码与 baseline IR、提出
+> Pass 组合 → Agent 编译、测试、评估并反馈 → 跟 baseline 和 Oracle 对比收益。
 
-前半段是"**造语言**"，后半段是"**用语言 + 优化**"。对应三个能力：造语言（设计）、优化闭环（优化）、对比实验（测试）。
+项目设想包含“造语言”和“用语言 + 优化”两部分；当前仓库已经实现的是人工构建的
+可信语言地基，以及 LLM 参与的优化闭环和对比实验。LLM 生成整门语言仍是未实现的
+扩展方向，不属于当前结项范围。
 
 系统角色分工一句话：**LLM 负责"想"，Agent 负责"管"，工具链负责"真跑"。**
 
@@ -25,8 +28,8 @@
         │
    ┌────┴─────┐     ┌──────────┐     ┌──────────────┐
    │  LLM 层  │ →   │ Agent 层 │ →   │  工具链层    │
-   │ 理解需求 │     │ Planner  │     │ Build/Run    │
-   │ 生成草案 │     │ Optimizer│     │ Bench/Save   │
+   │ 读取IR   │     │ Planner  │     │ Build/Run    │
+   │ Pass候选 │     │ Optimizer│     │ Bench/Save   │
    └──────────┘     │ Executor │     └──────────────┘
                     │ Evaluator│
                     └──────────┘
@@ -46,21 +49,18 @@ newlang-agent/
 │   ├── transformer.py         # Lark 解析树 → 自定义 AST（机械映射，替代手写 parser）
 │   ├── ir.py                  # AST → 三地址码 IR（★ 优化的地基，要动脑）
 │   ├── vm.py                  # 三地址码解释器（含指令计数，运行时间/指令数靠它）
-│   └── samples/               # 样例程序集（5~10 个，含循环密集负载）
+│   └── samples/               # 6 个样例程序（正式矩阵使用其中固定 5 个）
 │
 ├── optimizer/                 # 优化 passes（基线故意不做这些）
 │   ├── const_fold.py          # 常量折叠
 │   ├── dce.py                 # 死代码消除
-│   ├── peephole.py            # 窥孔优化
 │   ├── licm.py                # 循环不变量外提
 │   └── registry.py            # pass 注册表，Agent 按名字组合
 │
 ├── llm/                       # B组：LLM 封装
 │   ├── client.py              # 统一调用入口，强制 JSON 输出（DeepSeek，走 OpenAI 兼容 SDK）
-│   └── prompts/               # 3 套 Prompt 模板
-│       ├── design.txt         # 语言 / AST / IR 设计
-│       ├── optimize.txt       # 优化候选生成
-│       └── report.txt         # 报告归纳
+│   └── prompts/               # 当前已落地的 Prompt 模板
+│       └── optimize.txt       # 优化候选生成
 │
 ├── agents/                    # C组：多智能体
 │   ├── base.py                # Agent 基类
@@ -74,19 +74,22 @@ newlang-agent/
 │   ├── registry.py            # Tool Router
 │   ├── build.py               # build(): 源码 → 字节码
 │   ├── run.py                 # run_tests(): 执行 + 对结果
-│   ├── bench.py               # run_bench(): 计时 + 指令数
+│   ├── bench.py               # run_bench(): 指令数 + 计时 + 峰值 Python 内存
 │   └── save.py                # save_result(): 落盘
 │
 ├── benchmark/                 # D组：对比实验
-│   ├── configs/               # 四档配置：baseline/llm_only/agent_min/agent_full
-│   ├── runner.py              # 跑完整对比矩阵
-│   └── report.py              # 生成对比表 + 最终报告
+│   ├── configs.py             # 阶段四固定样例与四档 + Oracle 实验协议
+│   ├── schema.py              # 阶段四矩阵实验的统一记录格式
+│   └── runner.py              # 跑 baseline 与穷举优化档的可复现对比
 │
 ├── runs/                      # 所有实验产物（日志 / 结果 / JSON），按时间戳
 └── main.py                    # 入口
 ```
 
-目录结构直接对应四组分工（A/B/C/D），每个文件夹就是一个组的交付边界。
+上面只列出当前已落地的目录和文件。目录结构直接对应四组分工（A/B/C/D），
+每个文件夹就是一个组的交付边界。四档配置及统一数据契约已经落地；
+`benchmark/matrix.py` 和 `benchmark/report.py` 仍是阶段四待交付内容，
+不在当前目录树中预先列出。
 
 ---
 
@@ -182,6 +185,7 @@ class Candidate:
     compiled: bool = False
     correct: bool = False     # 功能是否通过
     exec_time_ms: float = None
+    peak_memory_kb: float = None
     instr_count: int = None
     error: str = None
 ```
@@ -232,9 +236,17 @@ def orchestrate(program, max_rounds=3):
     return context["best"], context["history"]
 ```
 
+原有 `orchestrate()` 保持简洁的 `(best, history)` 返回值；阶段四新增的
+`orchestrate_detailed()` 在同一条编排链上额外返回停止原因、实际轮数、执行候选数、
+逐轮 LLM usage、token/调用耗时汇总和 baseline 保底标记。LLM client 保持
+`complete_json() -> dict` 接口不变，并通过 `usage_events` / `drain_usage()`
+为每个实验 trial 提供隔离的调用记录。`DeepSeekClient` 使用
+`deepseek-v4-flash`，针对这个结构化候选任务默认关闭 thinking；可传
+`thinking=True` 显式启用，或传 `thinking=None` 沿用服务端默认行为。
+
 ### 5. 工具链：Agent 与"真实执行"之间的唯一通道
 
-每个工具统一签名 `(input_dict) -> output_dict`，`tools/registry.py` 里的 Tool Router 按名字分发（`call_tool(name, inp)`，名字没注册就抛 `UnknownToolError`）。已实现的四个工具（`profile` 待实现）：
+每个工具统一签名 `(input_dict) -> output_dict`，`tools/registry.py` 里的 Tool Router 按名字分发（`call_tool(name, inp)`，名字没注册就抛 `UnknownToolError`）。当前共实现四个工具：
 
 ```python
 def build(inp):       # {"source": str, "passes": list[str]}
@@ -242,7 +254,7 @@ def build(inp):       # {"source": str, "passes": list[str]}
 def run_tests(inp):   # {"bytecode", "expected"}
                       #   -> {"correct": bool, "output": ..., "error": str}
 def run_bench(inp):   # {"bytecode", "repeat"?: int}
-                      #   -> {"instr_count": int|None, "time_ms": float|None, "error": str}
+                      #   -> {"instr_count", "time_ms", "peak_memory_kb", "error"}
 def save_result(inp): # {"data": dict, "name"?: str}
                       #   -> {"ok": bool, "path": str, "error": str}   # 落盘到 runs/<时间戳>_<name>.json
 ```
@@ -251,7 +263,10 @@ def save_result(inp): # {"data": dict, "name"?: str}
 
 关于 `build` 的编排：源码 →（Lark + transformer）→ AST →（ir）→ 原始 IR → `apply_passes(passes, 原始IR)` → 优化后 IR（即 `bytecode`）。**`apply_passes` 是唯一做优化的地方，`build` 自身一行优化逻辑都没有。** `passes=[]` 就是 baseline：baseline 和优化档共用这同一条路径，唯一差别是 `passes` 列表——不给 baseline 开小灶，两边才干净可比。
 
-关于 `run_bench` 的两个指标：`instr_count` 是**确定性的**（同一段 IR 恒定，label 不计），是优化收益的**主要对比信号**、也是唯一能写进断言的那个；`time_ms` 会抖（GC / 调度 / 缓存），**仅作参考**，用来发现"指令数降了但时间反而涨"这类异常，不能拿来给方案排名。
+关于 `run_bench` 的三个指标：`instr_count` 是**确定性的**（同一段 IR 恒定，label 不计），
+是优化收益的**主要对比信号**、也是唯一能写进断言的那个；`time_ms` 会抖
+（GC / 调度 / 缓存），**仅作参考**；`peak_memory_kb` 由 `tracemalloc` 在独立的
+VM 执行中测量，同样只作参考。Evaluator 仍然只按正确性和指令数排名。
 
 > **关键点：基线版本的 `build`（`passes=[]`）生成朴素字节码，不做任何优化。** 基线越朴素，优化档的收益越明显，对比表才有内容。
 
@@ -295,9 +310,15 @@ def run_matrix(programs, repeat=5):
     return rows
 ```
 
-- `baseline`：跳过所有优化，是所有对比的锚点
-- `llm_only`：只调一次 LLM，不迭代
-- `agent_min / agent_full`：走完整编排循环（轮数不同）
+- `baseline`：不应用 Pass、不调用 LLM，是所有对比的锚点
+- `llm_only`：只调用一次 LLM、只执行一个 LLM 候选，不迭代
+- `agent_min`：单轮生成并实测最多三个候选，由 Evaluator 自动选优
+- `agent_full`：每轮最多三个候选、最多三轮，将 Evaluator 反馈传入下一轮
+- `oracle`：穷举当前 16 种 Pass 配置，只作为理论最优参考线，不算第五个系统档
+
+阶段四正式矩阵固定使用 `branch / loop_sum / array_dot / licm_demo / dead_code`
+五个程序；`basic` 保留为快速编译链冒烟样例。配置的单一事实源见
+`benchmark/configs.py`，矩阵 JSON 契约见 `benchmark/schema.py`。
 
 ---
 
@@ -348,7 +369,7 @@ def run_matrix(programs, repeat=5):
 | 组别 | 负责 | 交付产物 |
 |------|------|----------|
 | **A 组** 语言与前端 | grammar.lark、transformer、样例程序 | grammar.lark、AST/IR 定义、transformer、样例集 |
-| **B 组** LLM 设计 | Prompt 设计、输出格式、测试样例 | Prompt 库、结构化输出规范 |
+| **B 组** LLM 封装与优化候选 | DeepSeek 调用封装、优化 Prompt、结构化输出 | `llm/client.py`、`optimize.txt`、结构化输出规范 |
 | **C 组** Agent 与工具 | Planner / Executor、工具调用 | Agent 角色表、工具接口、编排循环 |
 | **D 组** 测试与报告 | benchmark、对比表、最终报告 | 对比实验表、统一报告模板 |
 
@@ -359,7 +380,7 @@ def run_matrix(programs, repeat=5):
 ## 最终交付清单
 
 - 语言说明 / grammar
-- Prompt 库
+- 优化候选 Prompt 模板
 - Agent 设计说明
 - 工具脚本
 - benchmark 结果

@@ -10,7 +10,8 @@ README 角色表：输入「候选 + 工具」，输出「日志 + 结果」。�
              compiled=False，记 error，后面不用跑了。
   run_tests  bytecode + expected → correct。铁律「先过正确性」的判定就在这里，
              但 Executor 只**记录** correct，不因为它是 False 就丢掉候选。
-  run_bench  bytecode → instr_count（确定性，主信号）+ time_ms（仅参考）。
+  run_bench  bytecode → instr_count（确定性，主信号）+ time_ms / peak_memory_kb
+             （仅参考）。
              只要编译过就量 —— 哪怕功能不对，程序也真跑了，指令数是事实。
 
 纪律对齐：所有工具都经 Tool Router（call_tool）分发，Executor 不直接 import 具体
@@ -97,5 +98,6 @@ class Executor(BaseAgent):
         bench = self.tools("run_bench", {"bytecode": bytecode, "repeat": repeat})
         cand.instr_count = bench.get("instr_count")
         cand.exec_time_ms = bench.get("time_ms")
+        cand.peak_memory_kb = bench.get("peak_memory_kb")
         if bench.get("error") and not cand.error:
             cand.error = bench["error"]

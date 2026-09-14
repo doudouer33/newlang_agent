@@ -12,6 +12,7 @@ README 角色表：输入「程序 + IR」，输出「候选列表」。它是 L
      调 llm.complete_json 拿回 {"candidates": [{"passes": [...], "reason": ...}, ...]}。
   3. **清洗**：只保留注册过的 pass 名（LLM 可能瞎编），按顺序去重，丢掉空组合
      （空 = baseline，不属于 llm 档），最多取 n 个。清洗后才包成 Candidate。
+  4. 返回原始候选数、接受数和结构化清洗事件，供阶段四实验统计失败原因。
 
 清洗这一步是「LLM 负责想、工具链负责真跑」这条纪律的体现：模型的输出一律当作
 不可信草案，落到可执行的东西之前先过一遍校验。
@@ -44,11 +45,24 @@ class OptimizerAgent(BaseAgent):
             data = self.llm.complete_json(user, system=load_prompt("optimize.txt"))
         except LLMError as e:
             # LLM 或解析失败：不抛，返回空候选 + 错误，让编排循环照常继续（这一轮无候选）。
-            return {"candidates": [], "error": str(e)}
+            return {
+                "candidates": [],
+                "raw_candidate_count": 0,
+                "accepted_candidate_count": 0,
+                "rejected_items": [],
+                "error": str(e),
+            }
 
-        candidates = self._to_candidates(program, source, data.get("candidates", []),
-                                         set(allowed), n)
-        return {"candidates": candidates}
+        candidates, raw_count, rejected = self._to_candidates(
+            program, source, data.get("candidates", []), set(allowed), n
+        )
+        return {
+            "candidates": candidates,
+            "raw_candidate_count": raw_count,
+            "accepted_candidate_count": len(candidates),
+            "rejected_items": rejected,
+            "error": None,
+        }
 
     # ---- 把源码编译成 baseline IR 文本，喂给 LLM 当判断依据 ----
     def _render_ir(self, source):
@@ -82,35 +96,62 @@ class OptimizerAgent(BaseAgent):
 
     # ---- 清洗 LLM 草案 → 一批 Candidate ----
     def _to_candidates(self, program, source, raw, allowed_set, n):
+        if not isinstance(raw, list):
+            return [], 0, [{"item": raw, "reason": "candidates_not_list"}]
+
         seen = set()                     # 按 pass 序列去重（顺序敏感：[cf,dce] != [dce,cf]）
         out = []
+        rejected_items = []
         for item in raw:
-            passes = self._clean_passes(item, allowed_set)
+            passes, cleaning = self._clean_passes(item, allowed_set)
+            rejected = cleaning
             if not passes:               # 空组合 = baseline，不放进 llm 档
+                if not rejected:
+                    rejected = [{"item": item, "reason": "empty_combination"}]
+                rejected_items.extend(rejected)
                 continue
             key = tuple(passes)
             if key in seen:
+                rejected_items.extend(rejected)
+                rejected_items.append({"item": item, "reason": "duplicate_combination"})
+                continue
+            if len(out) >= n:
+                rejected_items.extend(rejected)
+                rejected_items.append({"item": item, "reason": "candidate_limit"})
                 continue
             seen.add(key)
+            rejected_items.extend(rejected)
             out.append(Candidate(
                 id=f"{program}#llm:{'+'.join(passes)}",
                 source_program=source if source is not None else program,
                 passes=passes,
                 origin="llm",
             ))
-            if len(out) >= n:
-                break
-        return out
+        return out, len(raw), rejected_items
 
     @staticmethod
     def _clean_passes(item, allowed_set):
-        """从一个候选草案里取出合法的 pass 序列：只留注册过的名字，保持顺序。"""
+        """返回清洗后的 pass 序列和结构化清洗事件。"""
         if isinstance(item, dict):
             raw_passes = item.get("passes", [])
         elif isinstance(item, list):     # 容忍 LLM 直接给了个 pass 数组
             raw_passes = item
         else:
-            return []
+            return [], [{"item": item, "reason": "invalid_candidate_type"}]
         if not isinstance(raw_passes, list):
-            return []
-        return [p for p in raw_passes if isinstance(p, str) and p in allowed_set]
+            return [], [{"item": item, "reason": "passes_not_list"}]
+
+        passes = []
+        seen = set()
+        events = []
+        for name in raw_passes:
+            if not isinstance(name, str):
+                events.append({"item": name, "reason": "pass_not_string"})
+            elif name not in allowed_set:
+                events.append({"item": name, "reason": "unknown_pass"})
+            elif name in seen:
+                events.append({"item": name, "reason": "duplicate_pass"})
+            else:
+                seen.add(name)
+                passes.append(name)
+        return passes, events

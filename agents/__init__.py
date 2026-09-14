@@ -14,10 +14,10 @@ from .base import BaseAgent
 from .evaluator import Evaluator, better
 from .executor import Executor
 from .optimizer_agent import OptimizerAgent
-from .orchestrator import orchestrate
+from .orchestrator import orchestrate, orchestrate_detailed
 from .planner import Planner
 
 __all__ = [
     "BaseAgent", "OptimizerAgent", "Executor", "Evaluator", "better",
-    "Planner", "orchestrate",
+    "Planner", "orchestrate", "orchestrate_detailed",
 ]

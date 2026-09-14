@@ -7,7 +7,8 @@ README「B 组 · LLM 封装」：给上层一个**只吐结构化对象**的口
 
 供应商：走 **OpenAI 兼容 SDK，指向 DeepSeek**（base_url = https://api.deepseek.com）。
 DeepSeek 的 Chat Completions 接口与 OpenAI 同形，`response_format={"type":"json_object"}`
-即 JSON 模式。默认模型 deepseek-v4-flash，均可用环境变量覆盖。
+即 JSON 模式。默认模型 deepseek-v4-flash；结构化候选任务默认关闭 thinking，避免推理
+内容耗尽输出预算后没有最终 JSON。模型和地址可用环境变量覆盖。
 
 ★ 密钥安全：绝不硬编码进源码。api_key 从参数或环境变量 `DEEPSEEK_API_KEY` 读取；
   仓库根目录的 `.env`（已 gitignore）会在导入时被自动加载进环境，方便本地直接跑。
@@ -17,13 +18,18 @@ DeepSeek 的 Chat Completions 接口与 OpenAI 同形，`response_format={"type"
     先把对象建出来，只有真发请求时才要密钥，这样导入、测试都不被密钥卡住。
   - StubLLMClient：离线桩。给定固定 dict 或一个 callable，不联网直接返回。
     测试用它，Planner 的「固定流程、不真调 LLM」最小版也用它。
+
+两个实现都保留逐次调用事件；usage_events 只读查看，drain_usage() 取出并清空，
+用于阶段四按 program/config/trial 隔离 token、耗时和错误统计。
 """
 from __future__ import annotations
 
 import copy
 import json
 import os
+import time
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 
 # ---- 默认配置（均可用环境变量覆盖）----
@@ -98,8 +104,52 @@ def _extract_json(text: str) -> dict:
     return obj
 
 
+def _usage_counts(usage) -> dict:
+    """从 OpenAI 兼容 usage 对象或 dict 中读取 token 统计。"""
+    def value(name):
+        if usage is None:
+            return None
+        if isinstance(usage, dict):
+            return usage.get(name)
+        return getattr(usage, name, None)
+
+    prompt = value("prompt_tokens")
+    completion = value("completion_tokens")
+    total = value("total_tokens")
+    if total is None and prompt is not None and completion is not None:
+        total = prompt + completion
+    details = value("completion_tokens_details")
+    if isinstance(details, dict):
+        reasoning = details.get("reasoning_tokens")
+    else:
+        reasoning = getattr(details, "reasoning_tokens", None)
+    return {
+        "prompt_tokens": prompt,
+        "completion_tokens": completion,
+        "reasoning_tokens": reasoning,
+        "total_tokens": total,
+    }
+
+
 class LLMClient(ABC):
     """所有 LLM 客户端的统一接口：喂 prompt，吐一个 dict。"""
+
+    def __init__(self) -> None:
+        self._usage_events: list[dict] = []
+
+    @property
+    def usage_events(self) -> list[dict]:
+        """返回调用事件的深拷贝，调用方不能修改客户端内部历史。"""
+        return copy.deepcopy(self._usage_events)
+
+    def drain_usage(self) -> list[dict]:
+        """取出并清空调用事件，用于按 program/config/trial 隔离统计。"""
+        events = self.usage_events
+        self._usage_events.clear()
+        return events
+
+    def _record_usage(self, event: dict) -> None:
+        self._usage_events.append(copy.deepcopy(event))
 
     @abstractmethod
     def complete_json(
@@ -120,14 +170,18 @@ class DeepSeekClient(LLMClient):
         base_url: str | None = None,
         temperature: float | None = None,
         max_tokens: int = 4096,
+        thinking: bool | None = False,
         client=None,
     ):
+        super().__init__()
         # 环境变量兜底，全部可覆盖。model/base_url 也读环境，方便换模型不改码。
         self.model = model or os.getenv("DEEPSEEK_MODEL", DEFAULT_MODEL)
         self.base_url = base_url or os.getenv("DEEPSEEK_BASE_URL", DEFAULT_BASE_URL)
         self._api_key = api_key or os.getenv("DEEPSEEK_API_KEY")
         self.temperature = temperature
         self.max_tokens = max_tokens
+        # None 表示沿用供应商默认值；结构化优化默认关闭 thinking。
+        self.thinking = thinking
         # 允许注入一个「鸭子类型」客户端（有 .chat.completions.create）——测试靠它离线。
         self._client = client
 
@@ -171,18 +225,56 @@ class DeepSeekClient(LLMClient):
         }
         if self.temperature is not None:
             kwargs["temperature"] = self.temperature
+        if self.thinking is not None:
+            kwargs["extra_body"] = {
+                "thinking": {"type": "enabled" if self.thinking else "disabled"}
+            }
 
+        event = {
+            "model": self.model,
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "thinking": self.thinking,
+            "started_at": datetime.now().astimezone().isoformat(timespec="milliseconds"),
+            "latency_ms": None,
+            "prompt_tokens": None,
+            "completion_tokens": None,
+            "reasoning_tokens": None,
+            "total_tokens": None,
+            "finish_reason": None,
+            "success": False,
+            "error_type": None,
+            "error": None,
+        }
+        started = time.perf_counter()
         try:
             resp = self._get_client().chat.completions.create(**kwargs)
-        except LLMError:
+            event.update(_usage_counts(getattr(resp, "usage", None)))
+            choice = resp.choices[0]
+            event["finish_reason"] = getattr(choice, "finish_reason", None)
+            content = choice.message.content
+            if not content:
+                raise LLMError("DeepSeek 返回空内容")
+            result = _extract_json(content)
+        except LLMError as exc:
+            event["error_type"] = type(exc).__name__
+            event["error"] = str(exc)
             raise
-        except Exception as e:                      # 网络错、鉴权错、限流……都收口成 LLMError
-            raise LLMError(f"DeepSeek 调用失败：{type(e).__name__}: {e}") from e
-
-        content = resp.choices[0].message.content
-        if not content:
-            raise LLMError("DeepSeek 返回空内容")
-        return _extract_json(content)
+        except Exception as exc:
+            # 网络错、鉴权错、限流等都收口成 LLMError；事件保留底层异常类型。
+            event["error_type"] = type(exc).__name__
+            event["error"] = f"{type(exc).__name__}: {exc}"
+            raise LLMError(
+                f"DeepSeek 调用失败：{type(exc).__name__}: {exc}"
+            ) from exc
+        else:
+            event["success"] = True
+            return result
+        finally:
+            event["latency_ms"] = round(
+                (time.perf_counter() - started) * 1000.0, 3
+            )
+            self._record_usage(event)
 
 
 class StubLLMClient(LLMClient):
@@ -192,19 +284,57 @@ class StubLLMClient(LLMClient):
     - 传 callable(user, system, schema) -> dict：按输入动态产出，可用来断言 prompt。
     """
 
-    def __init__(self, response):
+    def __init__(self, response, *, usage: dict | None = None):
+        super().__init__()
         self._response = response
+        self._usage = usage
 
     def complete_json(
         self, user: str, *, system: str | None = None, schema: dict | None = None
     ) -> dict:
-        if callable(self._response):
-            out = self._response(user, system, schema)
+        event = {
+            "model": "stub",
+            "temperature": None,
+            "max_tokens": None,
+            "thinking": None,
+            "started_at": datetime.now().astimezone().isoformat(timespec="milliseconds"),
+            "latency_ms": None,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "reasoning_tokens": 0,
+            "total_tokens": 0,
+            "finish_reason": None,
+            "success": False,
+            "error_type": None,
+            "error": None,
+        }
+        if self._usage is not None:
+            event.update(_usage_counts(self._usage))
+
+        started = time.perf_counter()
+        try:
+            if callable(self._response):
+                out = self._response(user, system, schema)
+            else:
+                out = copy.deepcopy(self._response)
+            if not isinstance(out, dict):
+                raise LLMError(f"Stub 应返回 dict，得到 {type(out).__name__}")
+        except LLMError as exc:
+            event["error_type"] = type(exc).__name__
+            event["error"] = str(exc)
+            raise
+        except Exception as exc:
+            event["error_type"] = type(exc).__name__
+            event["error"] = f"{type(exc).__name__}: {exc}"
+            raise LLMError(f"Stub 调用失败：{type(exc).__name__}: {exc}") from exc
         else:
-            out = copy.deepcopy(self._response)     # 深拷贝：调用方改嵌套结构不污染桩
-        if not isinstance(out, dict):
-            raise LLMError(f"Stub 应返回 dict，得到 {type(out).__name__}")
-        return out
+            event["success"] = True
+            return out
+        finally:
+            event["latency_ms"] = round(
+                (time.perf_counter() - started) * 1000.0, 3
+            )
+            self._record_usage(event)
 
 
 def default_client() -> LLMClient:

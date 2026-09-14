@@ -22,15 +22,22 @@ from llm.client import _extract_json                          # noqa: E402
 
 # ---- 一个假的 OpenAI 兼容客户端：记录请求、返回预置内容 ----
 class _FakeClient:
-    def __init__(self, content, capture):
+    def __init__(self, content, capture, usage=None, finish_reason="stop"):
         self._content = content
         self._capture = capture
+        self._usage = usage
+        self._finish_reason = finish_reason
         self.chat = types.SimpleNamespace(completions=self)
 
     def create(self, **kwargs):
         self._capture.update(kwargs)              # 把请求参数抓出来供断言
         message = types.SimpleNamespace(content=self._content)
-        return types.SimpleNamespace(choices=[types.SimpleNamespace(message=message)])
+        return types.SimpleNamespace(
+            choices=[types.SimpleNamespace(
+                message=message, finish_reason=self._finish_reason
+            )],
+            usage=self._usage,
+        )
 
 
 # ==================================================================
@@ -89,6 +96,45 @@ def test_stub_callable_sees_prompt():
     assert stub.complete_json("hello") == {"echo": "hello"}
 
 
+def test_stub_usage_can_be_injected_and_drained():
+    stub = StubLLMClient(
+        {"ok": True},
+        usage={"prompt_tokens": 10, "completion_tokens": 2, "total_tokens": 12},
+    )
+    stub.complete_json("hello")
+    events = stub.usage_events
+    assert len(events) == 1
+    assert events[0]["success"] is True
+    assert events[0]["prompt_tokens"] == 10
+    assert events[0]["completion_tokens"] == 2
+    assert events[0]["total_tokens"] == 12
+    assert events[0]["latency_ms"] >= 0.0
+
+    # 属性返回深拷贝；drain 后客户端内部应为空。
+    events[0]["prompt_tokens"] = 999
+    assert stub.usage_events[0]["prompt_tokens"] == 10
+    assert stub.drain_usage()[0]["prompt_tokens"] == 10
+    assert stub.usage_events == []
+
+
+def test_stub_failure_is_recorded():
+    def boom(user, system, schema):
+        raise LLMError("模拟失败")
+
+    stub = StubLLMClient(boom)
+    try:
+        stub.complete_json("x")
+    except LLMError:
+        pass
+    else:
+        raise AssertionError("Stub 失败应抛 LLMError")
+
+    event = stub.usage_events[0]
+    assert event["success"] is False
+    assert event["error_type"] == "LLMError"
+    assert "模拟失败" in event["error"]
+
+
 # ==================================================================
 # DeepSeekClient（注入假客户端，离线）
 # ==================================================================
@@ -103,6 +149,7 @@ def test_deepseek_sends_json_mode_and_parses():
     assert result == {"passes": ["dce"]}
     assert capture["model"] == "deepseek-v4-flash"
     assert capture["response_format"] == {"type": "json_object"}
+    assert capture["extra_body"] == {"thinking": {"type": "disabled"}}
     # 两条消息：system 在前、user 在后
     roles = [m["role"] for m in capture["messages"]]
     assert roles == ["system", "user"]
@@ -110,6 +157,68 @@ def test_deepseek_sends_json_mode_and_parses():
     assert "json" in capture["messages"][0]["content"].lower()
     # 用户内容原样传进去
     assert capture["messages"][1]["content"] == "给我一个候选"
+
+
+def test_deepseek_records_usage_and_latency():
+    capture = {}
+    usage = types.SimpleNamespace(
+        prompt_tokens=40,
+        completion_tokens=8,
+        total_tokens=48,
+        completion_tokens_details=types.SimpleNamespace(reasoning_tokens=0),
+    )
+    fake = _FakeClient('{"passes": ["dce"]}', capture, usage=usage)
+    client = DeepSeekClient(model="deepseek-v4-flash", client=fake)
+
+    client.complete_json("给我一个候选")
+
+    event = client.usage_events[0]
+    assert event["model"] == "deepseek-v4-flash"
+    assert event["success"] is True
+    assert event["prompt_tokens"] == 40
+    assert event["completion_tokens"] == 8
+    assert event["reasoning_tokens"] == 0
+    assert event["total_tokens"] == 48
+    assert event["finish_reason"] == "stop"
+    assert event["thinking"] is False
+    assert event["latency_ms"] >= 0.0
+
+
+def test_deepseek_can_explicitly_enable_or_defer_thinking():
+    enabled_capture = {}
+    enabled = DeepSeekClient(
+        client=_FakeClient('{"ok": true}', enabled_capture), thinking=True
+    )
+    enabled.complete_json("x")
+    assert enabled_capture["extra_body"] == {"thinking": {"type": "enabled"}}
+
+    default_capture = {}
+    deferred = DeepSeekClient(
+        client=_FakeClient('{"ok": true}', default_capture), thinking=None
+    )
+    deferred.complete_json("x")
+    assert "extra_body" not in default_capture
+
+
+def test_deepseek_records_parse_failure_with_usage():
+    capture = {}
+    fake = _FakeClient(
+        "not json",
+        capture,
+        usage={"prompt_tokens": 3, "completion_tokens": 1, "total_tokens": 4},
+    )
+    client = DeepSeekClient(client=fake)
+    try:
+        client.complete_json("x")
+    except LLMError:
+        pass
+    else:
+        raise AssertionError("非法 JSON 应抛 LLMError")
+
+    event = client.usage_events[0]
+    assert event["success"] is False
+    assert event["total_tokens"] == 4
+    assert event["error_type"] == "LLMError"
 
 
 def test_deepseek_embeds_schema_into_system_prompt():
@@ -134,6 +243,9 @@ def test_deepseek_missing_key_errors_on_call_not_construction():
         assert "key" in str(e).lower() or "密钥" in str(e)
     else:
         raise AssertionError("缺密钥应在调用时抛 LLMError")
+    event = client.usage_events[0]
+    assert event["success"] is False
+    assert event["total_tokens"] is None
 
 
 def main():

@@ -47,6 +47,7 @@ def test_fills_candidate_end_to_end():
     assert cand.correct is True
     assert isinstance(cand.instr_count, int) and cand.instr_count > 0
     assert cand.exec_time_ms is not None
+    assert cand.peak_memory_kb is not None and cand.peak_memory_kb >= 0.0
     assert cand.error is None
 
 
@@ -124,12 +125,15 @@ def test_calls_tools_in_order():
     router = _FakeRouter({
         "build": {"ok": True, "bytecode": [("print", None, "x", None)], "error": ""},
         "run_tests": {"correct": True, "output": [1], "error": ""},
-        "run_bench": {"instr_count": 5, "time_ms": 0.1, "error": ""},
+        "run_bench": {
+            "instr_count": 5, "time_ms": 0.1, "peak_memory_kb": 12.5, "error": ""
+        },
     })
     cand = _cand(LOOP_SUM, ["dce"])
     Executor(tools=router).run({"candidates": [cand], "expected": [1]})
     assert router.calls == ["build", "run_tests", "run_bench"]
     assert cand.instr_count == 5 and cand.correct is True
+    assert cand.peak_memory_kb == 12.5
 
 
 def test_save_persists_when_requested():
