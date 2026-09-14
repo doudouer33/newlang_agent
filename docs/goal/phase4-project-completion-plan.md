@@ -24,12 +24,13 @@
 - [x] 已采集 VM 峰值内存，并提供详细编排结果。
 - [x] 已实现四档 + Oracle 统一矩阵 runner 和 CLI。
 - [x] 已实现 schema v2 JSON 到 Markdown 的确定性报告生成器。
+- [x] 已生成真实 DeepSeek 正式矩阵 `runs/final_matrix.json`。
+- [x] 已从正式矩阵生成 `docs/final_report.md` 并完成一致性核对。
 - [x] 当前全量测试 160 项通过。
 
 ### 1.2 当前缺口
 
-- [ ] 尚未执行真实 DeepSeek 的正式多 trial 四档结果。
-- [ ] 尚无由正式实验 JSON 自动生成的最终报告。
+- [ ] 尚待 P4-7 完成阶段四周报、最终 README 状态和仓库封板。
 
 ### 1.3 当前已知基准结果
 
@@ -178,7 +179,7 @@ context = {
 | 3 | P4-3 四档矩阵实验（已完成） | `benchmark/matrix.py` | P4-1、P4-2 |
 | 4 | P4-4 报告生成器（已完成） | `benchmark/report.py` | P4-3 |
 | 5 | P4-5 完整测试（已完成） | 新增测试集 | P4-2、P4-3、P4-4 |
-| 6 | P4-6 正式实验 | `runs/final_matrix.json`、`docs/final_report.md` | P4-5 |
+| 6 | P4-6 正式实验（已完成） | `runs/final_matrix.json`、`docs/final_report.md` | P4-5 |
 | 7 | P4-7 文档和仓库封板 | 最终 README、周报、干净仓库 | P4-6 |
 
 ---
@@ -1005,7 +1006,7 @@ python3 -m benchmark.matrix \
 - 阶段四 baseline/Oracle CLI 冒烟：4/4 记录正确、0 次 LLM 调用。
 - `runs/` 文件数在测试前后均为 4；compileall 与 `git diff --check` 通过。
 
-P4-5 已完成。提交 P4-3～P4-5 后进入 P4-6 正式实验。
+P4-5 已完成并提交；P4-6 也已完成，下一步进入 P4-7。
 
 ---
 
@@ -1017,14 +1018,14 @@ P4-5 已完成。提交 P4-3～P4-5 后进入 P4-6 正式实验。
 
 ### 10.2 实验前检查
 
-- [ ] 所有测试通过。
-- [ ] 工作区没有未预期修改。
-- [ ] 模型名称已固定。
-- [ ] temperature 已固定为 0 或模型支持的最低值。
-- [ ] `DEEPSEEK_API_KEY` 已通过环境变量或 `.env` 提供。
-- [ ] `.env` 没有被 Git 跟踪。
-- [ ] 正式样例仍是冻结的 5 个。
-- [ ] 正式配置参数与 P4-1 一致。
+- [x] 所有测试通过。
+- [x] 工作区没有未预期修改。
+- [x] 模型名称已固定。
+- [x] temperature 已固定为 0 或模型支持的最低值。
+- [x] `DEEPSEEK_API_KEY` 已通过环境变量或 `.env` 提供。
+- [x] `.env` 没有被 Git 跟踪。
+- [x] 正式样例仍是冻结的 5 个。
+- [x] 正式配置参数与 P4-1 一致。
 
 ### 10.3 建议正式命令
 
@@ -1038,12 +1039,15 @@ python3 -m benchmark.matrix \
   --configs baseline llm_only agent_min agent_full oracle \
   --trials 3 \
   --bench-repeat 5 \
+  --model deepseek-v4-flash \
   --temperature 0 \
+  --max-tokens 1024 \
   --output runs/final_matrix.json
 
 python3 -m benchmark.report \
   runs/final_matrix.json \
-  --output docs/final_report.md
+  --output docs/final_report.md \
+  --strict
 ```
 
 ### 10.4 正式产物
@@ -1070,13 +1074,30 @@ runs/*
 
 ### 10.6 结果核对
 
-- [ ] baseline 正确率为 100%。
-- [ ] Oracle 的 `licm_demo` 和 `dead_code` 结果与阶段三基准一致。
-- [ ] 每个 LLM 档都有 3 次 trial 记录。
-- [ ] token、调用次数和轮数可相互核对。
-- [ ] 每个失败记录都有原因。
-- [ ] 报告表格与 JSON 数字一致。
-- [ ] 报告没有将无收益写成有收益。
+- [x] baseline 正确率为 100%。
+- [x] Oracle 的 `licm_demo` 和 `dead_code` 结果与阶段三基准一致。
+- [x] 每个 LLM 档都有 3 次 trial 记录。
+- [x] token、调用次数和轮数可相互核对。
+- [x] 每个失败记录都有原因。
+- [x] 报告表格与 JSON 数字一致。
+- [x] 报告没有将无收益写成有收益。
+
+### 10.6.1 正式矩阵验收记录（2026-09-14）
+
+- 正式输入：固定 5 样例 × `baseline / llm_only / agent_min / agent_full /
+  oracle` × 3 trials，`bench_repeat=5`。
+- 模型参数：`deepseek-v4-flash`、temperature 0、max tokens 1024、thinking 关闭。
+- 输出 `runs/final_matrix.json`：schema v2 严格校验通过，75/75 条系统最终记录
+  正确，实际 LLM 调用 60 次，baseline 保底 28 次。
+- 环境记录：Python 3.11.15，Git commit `c0d719c`，实验开始时工作区干净。
+- 1 次 `licm_demo / agent_min / trial 1` 调用发生 API timeout；失败事件、耗时和
+  baseline 保底均已如实记录。该调用无供应商 usage，因此 `agent_min` 及全局 token
+  总量为 `null`，报告应显示 `—`，不伪造为 0。
+- 其余含 errors 的记录均为重复 Pass 或重复组合清洗事件，不是正确性失败。
+- 为保留原始试验的非确定性，没有挑选性重跑或手工修改正式 JSON。
+- `docs/final_report.md` 已由该 JSON 在严格模式下确定性生成，共 15 节、248 行；
+  重新生成结果与现有文件逐字节一致。
+- 报告如实显示 `agent_full` 相对 `llm_only` 为 0 个程序更优、5 个持平、0 个更差。
 
 ### 10.7 关于可复现性的表述
 
@@ -1088,10 +1109,12 @@ runs/*
 
 ### 10.8 完成判定
 
-- [ ] `runs/final_matrix.json` 存在且 schema 校验通过。
-- [ ] `docs/final_report.md` 由正式 JSON 生成。
-- [ ] 报告可在无网络情况下从 JSON 重新生成。
-- [ ] 所有正式输入、配置、环境和结果均可追溯。
+- [x] `runs/final_matrix.json` 存在且 schema 校验通过。
+- [x] `docs/final_report.md` 由正式 JSON 生成。
+- [x] 报告可在无网络情况下从 JSON 重新生成。
+- [x] 所有正式输入、配置、环境和结果均可追溯。
+
+P4-6 已完成，下一步进入 P4-7。
 
 ---
 
@@ -1224,8 +1247,8 @@ diff -u docs/final_report.md /tmp/newlang-final-report.md
 
 ### 数据与报告
 
-- [ ] `runs/final_matrix.json`
-- [ ] `docs/final_report.md`
+- [x] `runs/final_matrix.json`
+- [x] `docs/final_report.md`
 - [ ] 阶段四周报
 
 ### 文档与复现

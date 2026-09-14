@@ -308,8 +308,24 @@ python -m benchmark.matrix \
 ```
 
 不指定 `--samples` / `--configs` 时运行固定 5 个正式样例与四档系统 + Oracle。
-真实 LLM 档使用 DeepSeek；完整正式实验留到 P4-6 执行。每条 schema v2 记录保留
-trial、候选明细、轮次历史、LLM usage、提案最佳与 baseline 保底后的最终选择。
+每条 schema v2 记录保留 trial、候选明细、轮次历史、LLM usage、提案最佳与
+baseline 保底后的最终选择。
+
+P4-6 正式实验已经完成，原始数据见 `runs/final_matrix.json`，生成报告见
+`docs/final_report.md`：
+
+| 配置 | 正确记录 | LLM 调用 | baseline 保底 | Total tokens |
+|---|---:|---:|---:|---:|
+| baseline | 15/15 | 0 | 0 | 0 |
+| llm_only | 15/15 | 15 | 9 | 13140 |
+| agent_min | 15/15 | 15 | 10 | — |
+| agent_full | 15/15 | 30 | 9 | 28668 |
+| oracle | 15/15 | 0 | 0 | 0 |
+
+整场 75/75 条系统最终记录正确。`licm_demo` 和 `dead_code` 分别达到 12.27% 和
+25.00% 的指令数收益；`agent_full` 与 `llm_only` 在 5 个程序上的最终指令数持平。
+`agent_min` 有一次 API timeout，系统按设计回退 baseline；该次供应商没有返回
+usage，因此 token 总量如实显示为 `—`，没有按 0 处理。
 
 已有矩阵 JSON 后，可完全离线、确定性地生成 Markdown 报告：
 

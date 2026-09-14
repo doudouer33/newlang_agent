@@ -14,3 +14,4 @@ __pycache__/
 runs/*
 !runs/.gitkeep
 !runs/*_benchmark.json
+!runs/final_matrix.json
